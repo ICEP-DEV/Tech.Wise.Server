@@ -3307,27 +3307,47 @@ app.get('/api/drivers/nearby', async (req, res) => {
     });
 });
 
-// // In your routes file (e.g., tripRoutes.js)
-// app.post('/api/trips', async (req, res) => {
-//     try {
-//         const { customerId, driverId, pickUpLocation, dropOffLocation, vehicle_type } = req.body;
+app.get('/driverDetails/:userId', (req, res) => {
+    const userId = req.params.userId;
 
-//         // Make sure pickUpLocation and dropOffLocation are in the correct format
-//         const { lat: pickUpLat, lng: pickUpLng } = pickUpLocation;
-//         const { lat: dropOffLat, lng: dropOffLng } = dropOffLocation;
+    if (!userId) {
+        return res.status(400).json({ error: "User ID is required" });
+    }
 
-//         // Insert into your trips database table
-//         const result = await db.query(
-//             'INSERT INTO trip (customerId, driverId, pickUpLocation, dropOffLocation, vehicle_type) VALUES ($1, $2, $3, $4, $5) RETURNING id',
-//             [customerId, driverId, { lat: pickUpLat, lng: pickUpLng }, { lat: dropOffLat, lng: dropOffLng }, vehicle_type]
-//         );
+    // SQL query to join users, driver, and car_listing tables to get the required details
+    const sql = `
+        SELECT 
+            users.name, 
+            users.lastName, 
+            users.email, 
+            users.gender, 
+            users.profile_picture, 
+            driver.photo, 
+            car_listing.car_model, 
+            car_listing.car_image, 
+            car_listing.license_plate
+        FROM users
+        LEFT JOIN driver ON users.id = driver.users_id
+        LEFT JOIN car_listing ON users.id = car_listing.userId
+        WHERE users.id = ?`;
 
-//         res.status(201).json({ tripId: result.rows[0].id });
-//     } catch (error) {
-//         console.error('Error saving trip data:', error);
-//         res.status(500).json({ error: 'Internal server error' });
-//     }
-// });
+    // Execute the SQL query
+    db.query(sql, [userId], (err, results) => {
+        if (err) {
+            console.error("Error fetching driver details by user ID:", err);
+            return res.status(500).json({ error: "An error occurred while fetching driver details" });
+        }
+
+        // Check if the user exists
+        if (results.length === 0) {
+            return res.status(404).json({ message: "User or driver details not found" });
+        }
+
+        // Return the user, driver, and car details
+        return res.status(200).json(results[0]); // Return the first result as it should be unique by userId
+    });
+});
+
 
 
 
