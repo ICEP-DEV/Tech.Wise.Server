@@ -45,6 +45,10 @@ io.on('connection', (socket) => {
         io.emit('tripCancelled', { tripId });
     });
 
+    socket.on('customerCancelTrip', (tripId) => {
+        io.emit('customerCancelTrip', { tripId });
+    });
+
     socket.on('disconnect', () => {
         console.log('Client disconnected');
     });
@@ -166,7 +170,7 @@ app.post('/driver_details', upload.fields([
 
     // Add logic for inserting car_inspection into the database
 
-    
+
     const query = `
         INSERT INTO driver (users_id, gender, URL_payment, photo, id_copy, police_clearance, pdp, car_inspection)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
@@ -349,7 +353,7 @@ app.get('/car_listing/user', (req, res) => {
 app.put('/car_listing/:id', upload.single('carImage'), (req, res) => {
     const carId = req.params.id;
     const { carMake, carModel, carYear, carSeats, carColor, licensePlate } = req.body;
-    
+
     // Log received data for debugging
     console.log('Received car ID:', carId);
     console.log('Request body:', req.body);
@@ -431,31 +435,31 @@ app.post('/driver_log', (req, res) => {
 // login for all users
 app.post('/login', (req, res) => {
     const { email, password } = req.body;
-  
+
     // Validate inputs
     if (!email || !password) {
-      return res.status(400).json({ message: "Email and password are required" });
+        return res.status(400).json({ message: "Email and password are required" });
     }
-  
+
     const sql = "SELECT id, role, name, email FROM users WHERE email = ? AND password = ?";
     db.query(sql, [email, password], (err, result) => {
-      if (err) {
-        console.error("Error executing SQL query:", err);
-        return res.status(500).json({ message: "Internal server error" });
-      }
-  
-      if (result.length > 0) {
-        req.session.username = result[0].name; // Store the username in session
-        req.session.userId = result[0].id; // Store the user ID in session
-        req.session.role = result[0].role; // Store the user role in session
-        req.session.email = result[0].email; // Store the user email in session
-        return res.json({ login: true, message: "Login successful" });
-      } else {
-        return res.status(401).json({ login: false, message: "Invalid email or password" });
-      }
+        if (err) {
+            console.error("Error executing SQL query:", err);
+            return res.status(500).json({ message: "Internal server error" });
+        }
+
+        if (result.length > 0) {
+            req.session.username = result[0].name; // Store the username in session
+            req.session.userId = result[0].id; // Store the user ID in session
+            req.session.role = result[0].role; // Store the user role in session
+            req.session.email = result[0].email; // Store the user email in session
+            return res.json({ login: true, message: "Login successful" });
+        } else {
+            return res.status(401).json({ login: false, message: "Invalid email or password" });
+        }
     });
-  });
-  
+});
+
 //get user info
 app.get('/userInfo/:id', (req, res) => {
     const sql = "SELECT * FROM users WHERE id = ?";
@@ -578,11 +582,11 @@ app.get('/carListings', (req, res) => {
 
 // Edit customer endpoint
 app.put('/edit_customer/:id', (req, res) => {
-    const { name, lastName, email,  phoneNumber, address } = req.body;
+    const { name, lastName, email, phoneNumber, address } = req.body;
     const userId = req.params.id;
 
     const sql = "UPDATE users SET `name` = ?, `lastName` = ?, `email` = ?,  `phoneNumber` = ?, `address` = ? WHERE `id` = ?";
-    const values = [name, lastName, email,  phoneNumber, address, userId]; // Include userId as the last parameter
+    const values = [name, lastName, email, phoneNumber, address, userId]; // Include userId as the last parameter
 
     db.query(sql, values, (err, result) => {
         if (err) {
@@ -670,7 +674,7 @@ app.post('/api/trips', (req, res) => {
     const {
         customerId, driverId, requestDate, currentDate, pickUpLocation, dropOffLocation, statuses,
         rating, feedback, duration_minutes, vehicle_type, distance_traveled, cancellation_reason,
-        cancel_by, pickupTime, dropOffTime,pickUpCoordinates,dropOffCoordinates
+        cancel_by, pickupTime, dropOffTime, pickUpCoordinates, dropOffCoordinates
     } = req.body;
 
     // Check for required fields
@@ -700,7 +704,7 @@ app.post('/api/trips', (req, res) => {
             console.error("Error saving trip data:", err);
             return res.status(500).json({ error: "An error occurred while saving trip data" });
         }
-        
+
         const tripId = result.insertId; // Get the inserted trip ID
         if (!tripId) {
             console.error("Trip ID not generated after insertion");
@@ -735,7 +739,7 @@ app.get('/viewDrivers', (req, res) => {
 //delete customers
 app.delete('/delete_customer/:id', (req, res) => {
     const { id } = req.params;
- 
+
     // Define SQL queries for deleting records from related tables
     const deleteFeedbackSQL = "DELETE FROM feedback WHERE userId = ?";
     const deletePaymentSQL = "DELETE FROM payment WHERE tripId IN (SELECT id FROM trip WHERE customerId = ?)";
@@ -1021,103 +1025,103 @@ app.get('/api/trips/latest/:customerId', (req, res) => {
       ORDER BY requestDate DESC 
       LIMIT 1
     `;
-    
-    db.query(sql, [customerId], (err, result) => {
-      if (err) {
-        console.error("Error fetching latest trip:", err);
-        return res.status(500).json({ error: "An error occurred while fetching the latest trip" });
-      }
-      
-      if (result.length === 0) {
-        return res.status(404).json({ error: "No trips found for the customer" });
-      }
-      
-      return res.status(200).json(result[0]); // Return the trip details
-    });
-  });
 
-  
-  
-  
+    db.query(sql, [customerId], (err, result) => {
+        if (err) {
+            console.error("Error fetching latest trip:", err);
+            return res.status(500).json({ error: "An error occurred while fetching the latest trip" });
+        }
+
+        if (result.length === 0) {
+            return res.status(404).json({ error: "No trips found for the customer" });
+        }
+
+        return res.status(200).json(result[0]); // Return the trip details
+    });
+});
+
+
+
+
 // Endpoint to handle trip cancellation
 app.patch('/api/trips/:tripId', (req, res) => {
     const { tripId } = req.params;
     const {
-      customerId,
-      currentDate,
-      statuses,
-      cancellation_reason,
-      cancel_by,
-      distance_travelled
+        customerId,
+        currentDate,
+        statuses,
+        cancellation_reason,
+        cancel_by,
+        distance_travelled
 
     } = req.body;
-  
-    if (!tripId || !customerId || !currentDate || !statuses ||  !distance_travelled || !cancellation_reason || !cancel_by) {
-      return res.status(400).json({ error: "Required fields are missing" });
+
+    if (!tripId || !customerId || !currentDate || !statuses || !distance_travelled || !cancellation_reason || !cancel_by) {
+        return res.status(400).json({ error: "Required fields are missing" });
     }
-  
+
     const sql = "UPDATE trip SET statuses = ?, currentDate = ?, cancellation_reason = ?, cancel_by = ?,  distance_traveled = ? WHERE id = ? AND customerId = ?";
-    
-    db.query(sql, [statuses, currentDate, cancellation_reason, cancel_by,distance_travelled, tripId, customerId], (err, result) => {
-      if (err) {
-        console.error("Error updating trip data:", err);
-        return res.status(500).json({ error: "An error occurred while updating trip data" });
-      }
-      return res.status(200).json({ message: "Trip data updated successfully" });
+
+    db.query(sql, [statuses, currentDate, cancellation_reason, cancel_by, distance_travelled, tripId, customerId], (err, result) => {
+        if (err) {
+            console.error("Error updating trip data:", err);
+            return res.status(500).json({ error: "An error occurred while updating trip data" });
+        }
+        return res.status(200).json({ message: "Trip data updated successfully" });
     });
-  });
-  
+});
+
 
 // Endpoint to handle trip cancellation
 app.patch('/api/tripsDriver/:tripId', (req, res) => {
     const { tripId } = req.params;
     const {
-      driverId,
-      currentDate,
-      statuses,
-      cancellation_reason,
-      cancel_by,
-      distance_travelled
+        driverId,
+        currentDate,
+        statuses,
+        cancellation_reason,
+        cancel_by,
+        distance_travelled
     } = req.body;
-  
+
     // Ensure required fields are present
     if (!tripId || !driverId || !currentDate || !statuses || !distance_travelled || !cancellation_reason || !cancel_by) {
-      return res.status(400).json({ error: "Required fields are missing" });
+        return res.status(400).json({ error: "Required fields are missing" });
     }
-   
+
     // SQL query to update the trip status
     const sql = "UPDATE trip SET statuses = ?, currentDate = ?, cancellation_reason = ?, cancel_by = ?, distance_traveled = ? WHERE id = ? AND driverId = ?";
-  
+
     db.query(sql, [statuses, currentDate, cancellation_reason, cancel_by, distance_travelled, tripId, driverId], (err, result) => {
-      if (err) {
-        console.error("Error updating trip data:", err);
-        return res.status(500).json({ error: "An error occurred while updating trip data" });
-      }
-  
-      // If trip is cancelled, send cancellation message to the customer via socket
-      if (statuses === 'cancelled') {
-        // Query to fetch the customer ID for the trip
-        const getCustomerSql = "SELECT customerId FROM trip WHERE id = ?";
-        
-        db.query(getCustomerSql, [tripId], (err, customerResult) => {
-          if (err) {
-            console.error("Error fetching customer ID:", err);
-            return res.status(500).json({ error: "Error fetching customer ID" });
-          }
-  
-          // Ensure a valid customer was found
-          if (customerResult.length === 0) {
-            return res.status(404).json({ error: "Customer not found for the given trip" });
-          }
-  
-          const customerId = customerResult[0].customerId;
-        });
-      }
-  
-      return res.status(200).json({ message: "Trip data updated successfully" });
+        if (err) {
+            console.error("Error updating trip data:", err);
+            return res.status(500).json({ error: "An error occurred while updating trip data" });
+        }
+
+        // If trip is cancelled, send cancellation message to the customer via socket
+        if (statuses === 'cancelled') {
+            // Query to fetch the customer ID for the trip
+            const getCustomerSql = "SELECT customerId FROM trip WHERE id = ?";
+
+            db.query(getCustomerSql, [tripId], (err, customerResult) => {
+                if (err) {
+                    console.error("Error fetching customer ID:", err);
+                    return res.status(500).json({ error: "Error fetching customer ID" });
+                }
+
+                // Ensure a valid customer was found
+                if (customerResult.length === 0) {
+                    return res.status(404).json({ error: "Customer not found for the given trip" });
+                }
+
+                const customerId = customerResult[0].customerId;
+            });
+        }
+
+        return res.status(200).json({ message: "Trip data updated successfully" });
     });
-  });
-  
+});
+
 // Endpoint to get earnings
 
 app.get('/earnings', (req, res) => {
@@ -1250,12 +1254,12 @@ app.post('/addVehicles', upload.single('image'), (req, res) => {
 });
 // Endpoint to handle contact form submissions
 app.post('/contact', (req, res) => {
-    const {email, subject, message, contact_date } = req.body;
-    
+    const { email, subject, message, contact_date } = req.body;
+
     if (!subject || !message || !email) {
         return res.status(400).json({ error: "Subject and message are required" });
     }
-    
+
     const sql = "INSERT INTO contact_support (email, subject, message, contact_date) VALUES (?, ?, ?, ?)";
     db.query(sql, [email, subject, message, contact_date], (err, result) => {
         if (err) {
@@ -1270,61 +1274,61 @@ app.post('/contact', (req, res) => {
 app.get('/messages', (req, res) => {
     // Query to fetch messages from the contact_support table
     const sql = 'SELECT id, message FROM contact_support WHERE status = "unread"'; // Assuming 'status' column exists
-  
+
     // Execute the query
     db.query(sql, (err, results) => {
-      if (err) {
-        console.error('Error fetching messages:', err);
-        return res.status(500).json({ error: 'An unexpected error occurred' });
-      }
-  
-      // If no errors, return the messages as JSON response
-      res.json({ messages: results });
-    });
-  })
+        if (err) {
+            console.error('Error fetching messages:', err);
+            return res.status(500).json({ error: 'An unexpected error occurred' });
+        }
 
-  // Endpoint to fetch messages
+        // If no errors, return the messages as JSON response
+        res.json({ messages: results });
+    });
+})
+
+// Endpoint to fetch messages
 app.get('/messages/all', (req, res) => {
     const sql = 'SELECT * FROM contact_support'; // Assuming your table name is contact_support
-  
+
     db.query(sql, (err, result) => {
-      if (err) {
-        console.error('Error fetching messages:', err);
-        return res.status(500).json({ error: 'An error occurred while fetching messages' });
-      }
-      res.json({ messages: result }); // Assuming result is an array of messages
+        if (err) {
+            console.error('Error fetching messages:', err);
+            return res.status(500).json({ error: 'An error occurred while fetching messages' });
+        }
+        res.json({ messages: result }); // Assuming result is an array of messages
     });
-  });
-  
-  // Route to mark message as read
+});
+
+// Route to mark message as read
 app.put('/messages/:id', (req, res) => {
     const messageId = req.params.id;
     const status = req.body.status || 'read'; // Default to 'read' if no status provided
-  
+
     const sql = 'UPDATE contact_support SET status = ? WHERE id = ?';
     db.query(sql, [status, messageId], (err, result) => {
-      if (err) {
-        console.error('Error marking message as read:', err);
-        return res.status(500).json({ error: 'An unexpected error occurred' });
-      }
-      res.json({ message: 'Message updated successfully' });
+        if (err) {
+            console.error('Error marking message as read:', err);
+            return res.status(500).json({ error: 'An unexpected error occurred' });
+        }
+        res.json({ message: 'Message updated successfully' });
     });
-  });
-  
-  // Route to delete a message
-  app.delete('/messages/:id', (req, res) => {
+});
+
+// Route to delete a message
+app.delete('/messages/:id', (req, res) => {
     const messageId = req.params.id;
-    
+
     const sql = 'DELETE FROM contact_support WHERE id = ?';
     db.query(sql, [messageId], (err, result) => {
-      if (err) {
-        console.error('Error deleting message:', err);
-        return res.status(500).json({ error: 'An unexpected error occurred' });
-      }
-      res.json({ message: 'Message deleted successfully' });
+        if (err) {
+            console.error('Error deleting message:', err);
+            return res.status(500).json({ error: 'An unexpected error occurred' });
+        }
+        res.json({ message: 'Message deleted successfully' });
     });
-  });
-  
+});
+
 //////////////////////////////////////////////////////////////////////////////////////////////////////
 app.get('/api/update_settings', (req, res) => {
     const query = 'SELECT * FROM site_settings'; // Adjust the query as needed
@@ -1612,7 +1616,7 @@ app.post('/api/update-trip-status', (req, res) => {
 
                 const customerId = customerResult[0].customerId;
 
-            
+
 
                 return res.status(200).json({ message: "Driver state and trip status updated successfully" });
             });
@@ -1662,10 +1666,10 @@ app.post('/api/cancel-trip', (req, res) => {
 
 // Add a new payment
 app.post('/api/payments', (req, res) => {
-    const { tripId, amount, paymentType,paymentDate } = req.body;
+    const { tripId, amount, paymentType, paymentDate } = req.body;
     console.log('Received payment data:', req.body);
     // Check if required fields are provided
-    if (!tripId || !amount || !paymentType  || !paymentDate) {
+    if (!tripId || !amount || !paymentType || !paymentDate) {
         return res.status(400).json({ message: "Missing required fields" });
     }
 
@@ -1687,20 +1691,20 @@ app.post('/api/payments', (req, res) => {
 // Endpoint to submit feedback
 // app.post('/api/feedback', (req, res) => {
 //     const { userId, content, rating, role } = req.body;
-  
+
 //     console.log('Received feedback data:', { userId, content, rating, role });
-  
+
 //     // Check if required fields are provided
 //     if (!userId || !content || !rating || !role) {
 //       return res.status(400).json({ message: 'Missing required fields' });
 //     }
-  
+
 //     // SQL query to insert the feedback
 //     const sql = `
 //       INSERT INTO feedback (userId, content, rating, role)
 //       VALUES (?, ?, ?, ?)
 //     `;
-  
+
 //     // Execute the query
 //     db.query(sql, [userId, content, rating, role], (err, results) => {
 //       if (err) {
@@ -1714,25 +1718,25 @@ app.post('/api/payments', (req, res) => {
 app.get('/api/feedback', (req, res) => {
     const sql = 'SELECT * FROM feedback';
     db.query(sql, (err, results) => {
-      if (err) {
-        console.error('Error fetching feedback:', err);
-        return res.status(500).json({ message: 'Internal server error' });
-      }
-      res.status(200).json(results);
+        if (err) {
+            console.error('Error fetching feedback:', err);
+            return res.status(500).json({ message: 'Internal server error' });
+        }
+        res.status(200).json(results);
     });
-  });
+});
 
 // Endpoint to send notifications
 // app.post('/api/notifications', async (req, res) => {
 //     const { to, message } = req.body;
-    
+
 //     console.log('Received notification request:', req.body);
 
 //     try {
 //         const query = to === 'driver' 
 //             ? 'SELECT email FROM users WHERE role = "driver"' 
 //             : 'SELECT email FROM users WHERE role = "customer"';
-        
+
 //         db.query(query, async (err, rows) => {
 //             if (err) {
 //                 console.error('Error fetching emails:', err);
@@ -1779,171 +1783,171 @@ app.get('/api/feedback', (req, res) => {
 // Create a plan
 const createPlan = (name, interval, amount) => {
     return new Promise((resolve, reject) => {
-      const params = JSON.stringify({
-        name,
-        interval,
-        amount
-      });
-  
-      const options = {
-        hostname: 'api.paystack.co',
-        port: 443,
-        path: '/plan',
-        method: 'POST',
-        headers: {
-          Authorization: 'Bearer sk_test_ba4382c256544e703a5e664af13f87cbd8fb885c',
-          'Content-Type': 'application/json'
-        }
-      };
-  
-      const req = https.request(options, res => {
-        let data = '';
-  
-        res.on('data', (chunk) => {
-          data += chunk;
+        const params = JSON.stringify({
+            name,
+            interval,
+            amount
         });
-  
-        res.on('end', () => {
-          console.log('Create Plan Response:', data);  // Log the response data
-          const planResponse = JSON.parse(data);
-          if (planResponse.status) {
-            resolve(planResponse.data.plan_code);
-          } else {
-            reject('Failed to create plan');
-          }
+
+        const options = {
+            hostname: 'api.paystack.co',
+            port: 443,
+            path: '/plan',
+            method: 'POST',
+            headers: {
+                Authorization: 'Bearer sk_test_ba4382c256544e703a5e664af13f87cbd8fb885c',
+                'Content-Type': 'application/json'
+            }
+        };
+
+        const req = https.request(options, res => {
+            let data = '';
+
+            res.on('data', (chunk) => {
+                data += chunk;
+            });
+
+            res.on('end', () => {
+                console.log('Create Plan Response:', data);  // Log the response data
+                const planResponse = JSON.parse(data);
+                if (planResponse.status) {
+                    resolve(planResponse.data.plan_code);
+                } else {
+                    reject('Failed to create plan');
+                }
+            });
+        }).on('error', error => {
+            reject(error);
         });
-      }).on('error', error => {
-        reject(error);
-      });
-  
-      console.log('Create Plan Request Params:', params);  // Log the request parameters
-      req.write(params);
-      req.end();
+
+        console.log('Create Plan Request Params:', params);  // Log the request parameters
+        req.write(params);
+        req.end();
     });
-  };
-  
-  // Initialize a transaction
-  const initializeTransaction = (planCode, email, amount) => {
+};
+
+// Initialize a transaction
+const initializeTransaction = (planCode, email, amount) => {
     return new Promise((resolve, reject) => {
-      const params = JSON.stringify({
-        email,
-        amount,
-        plan: planCode,
-        callback_url: 'http://localhost:3000/verify'  // Set the URL where you want to redirect after success
-      });
-  
-      const options = {
-        hostname: 'api.paystack.co',
-        port: 443,
-        path: '/transaction/initialize',
-        method: 'POST',
-        headers: {
-          Authorization: 'Bearer sk_test_ba4382c256544e703a5e664af13f87cbd8fb885c',
-          'Content-Type': 'application/json'
-        }
-      };
-  
-      const req = https.request(options, res => {
-        let data = '';
-  
-        res.on('data', (chunk) => {
-          data += chunk;
+        const params = JSON.stringify({
+            email,
+            amount,
+            plan: planCode,
+            callback_url: 'http://localhost:3000/verify'  // Set the URL where you want to redirect after success
         });
-  
-        res.on('end', () => {
-          console.log('Initialize Transaction Response:', data);  // Log the response data
-          const response = JSON.parse(data);
-          if (response.status) {
-            resolve(response.data.authorization_url);  // Return the authorization URL
-          } else {
-            reject('Failed to initialize transaction');
-          }
+
+        const options = {
+            hostname: 'api.paystack.co',
+            port: 443,
+            path: '/transaction/initialize',
+            method: 'POST',
+            headers: {
+                Authorization: 'Bearer sk_test_ba4382c256544e703a5e664af13f87cbd8fb885c',
+                'Content-Type': 'application/json'
+            }
+        };
+
+        const req = https.request(options, res => {
+            let data = '';
+
+            res.on('data', (chunk) => {
+                data += chunk;
+            });
+
+            res.on('end', () => {
+                console.log('Initialize Transaction Response:', data);  // Log the response data
+                const response = JSON.parse(data);
+                if (response.status) {
+                    resolve(response.data.authorization_url);  // Return the authorization URL
+                } else {
+                    reject('Failed to initialize transaction');
+                }
+            });
+        }).on('error', error => {
+            reject(error);
         });
-      }).on('error', error => {
-        reject(error);
-      });
-  
-      console.log('Initialize Transaction Request Params:', params);  // Log the request parameters
-      req.write(params);
-      req.end();
+
+        console.log('Initialize Transaction Request Params:', params);  // Log the request parameters
+        req.write(params);
+        req.end();
     });
-  };
-  
+};
+
 
 
 app.get('/api/verify/:reference', async (req, res) => {
     const reference = req.params.reference;
     const userId = req.query.userId; // Access userId from query parameters
-  
+
     // Log received request data
     console.log('Received Verification Request:', { reference, userId });
-  
+
     if (!reference || !userId) {
-      return res.status(400).json({ error: 'Reference and userId are required' });
+        return res.status(400).json({ error: 'Reference and userId are required' });
     }
-  
+
     try {
-      // Function to verify transaction with Paystack
-      const verifyTransaction = (reference) => {
-        return new Promise((resolve, reject) => {
-          const options = {
-            hostname: 'api.paystack.co',
-            port: 443,
-            path: `/transaction/verify/${reference}`,
-            method: 'GET',
-            headers: {
-              Authorization: 'Bearer sk_test_ba4382c256544e703a5e664af13f87cbd8fb885c'
-            }
-          };
-  
-          const request = https.request(options, paystackRes => {
-            let data = '';
-  
-            paystackRes.on('data', chunk => {
-              data += chunk;
+        // Function to verify transaction with Paystack
+        const verifyTransaction = (reference) => {
+            return new Promise((resolve, reject) => {
+                const options = {
+                    hostname: 'api.paystack.co',
+                    port: 443,
+                    path: `/transaction/verify/${reference}`,
+                    method: 'GET',
+                    headers: {
+                        Authorization: 'Bearer sk_test_ba4382c256544e703a5e664af13f87cbd8fb885c'
+                    }
+                };
+
+                const request = https.request(options, paystackRes => {
+                    let data = '';
+
+                    paystackRes.on('data', chunk => {
+                        data += chunk;
+                    });
+
+                    paystackRes.on('end', () => {
+                        try {
+                            const result = JSON.parse(data);
+                            resolve(result);
+                        } catch (error) {
+                            reject(new Error('Error parsing response'));
+                        }
+                    });
+                });
+
+                request.on('error', error => {
+                    reject(new Error('Request error'));
+                });
+
+                request.end();
             });
-  
-            paystackRes.on('end', () => {
-              try {
-                const result = JSON.parse(data);
-                resolve(result);
-              } catch (error) {
-                reject(new Error('Error parsing response'));
-              }
-            });
-          });
-  
-          request.on('error', error => {
-            reject(new Error('Request error'));
-          });
-  
-          request.end();
-        });
-      };
-  
-      const result = await verifyTransaction(reference);
-  
-      if (result.status === true && result.message === 'Verification successful') {
-        console.log('Verification Successful:', result);  // Log successful verification result
-  
-        const transactionData = result.data;
-  
-        // Extract relevant data
-        const {
-          status,
-          amount,
-          created_at,
-          customer: { customer_code, id: customerId }, // Extract customer id as customerId
-          plan: paystackPlanId,
-          plan_object: { name: plan_name },
-          reference: paystackSubscriptionId
-        } = transactionData;
-  
-        // Divide the amount by 100
-        const amountInUnits = amount / 100;
-  
-        // Insert or update the subscription table
-        const insertQuery = `
+        };
+
+        const result = await verifyTransaction(reference);
+
+        if (result.status === true && result.message === 'Verification successful') {
+            console.log('Verification Successful:', result);  // Log successful verification result
+
+            const transactionData = result.data;
+
+            // Extract relevant data
+            const {
+                status,
+                amount,
+                created_at,
+                customer: { customer_code, id: customerId }, // Extract customer id as customerId
+                plan: paystackPlanId,
+                plan_object: { name: plan_name },
+                reference: paystackSubscriptionId
+            } = transactionData;
+
+            // Divide the amount by 100
+            const amountInUnits = amount / 100;
+
+            // Insert or update the subscription table
+            const insertQuery = `
           INSERT INTO subscriptions (statuses, plan_name, amount, created_at, user_id, paystack_subscription_id, verification_id, customer_code)
           VALUES (?, ?, ?, ?, ?, ?, ?, ?)
           ON DUPLICATE KEY UPDATE
@@ -1954,33 +1958,33 @@ app.get('/api/verify/:reference', async (req, res) => {
           paystack_subscription_id = VALUES(paystack_subscription_id),
           customer_code = VALUES(customer_code)
         `;
-  
-        const verification_id = customerId; // Use customerId as verification_id
-  
-        await new Promise((resolve, reject) => {
-          db.query(insertQuery, [status ? 1 : 0, plan_name, amountInUnits, created_at, userId, paystackSubscriptionId, verification_id, customer_code], (err, results) => {
-            if (err) {
-              console.error('Error inserting data:', err);
-              reject(new Error('Error inserting data'));
-            } else {
-              console.log('Data inserted successfully:', results);
-              resolve();
-            }
-          });
-        });
-  
-        res.json(result);
-      } else {
-        res.status(400).json({ error: 'Verification failed' });
-      }
+
+            const verification_id = customerId; // Use customerId as verification_id
+
+            await new Promise((resolve, reject) => {
+                db.query(insertQuery, [status ? 1 : 0, plan_name, amountInUnits, created_at, userId, paystackSubscriptionId, verification_id, customer_code], (err, results) => {
+                    if (err) {
+                        console.error('Error inserting data:', err);
+                        reject(new Error('Error inserting data'));
+                    } else {
+                        console.log('Data inserted successfully:', results);
+                        resolve();
+                    }
+                });
+            });
+
+            res.json(result);
+        } else {
+            res.status(400).json({ error: 'Verification failed' });
+        }
     } catch (error) {
-      console.error(error);
-      res.status(500).json({ error: 'Something went wrong' });
+        console.error(error);
+        res.status(500).json({ error: 'Something went wrong' });
     }
-  });
-  
-  
-  // Insert subscription into the database
+});
+
+
+// Insert subscription into the database
 // const createSubscriptionInDatabase = (subscriptionData, userId) => {
 //   return new Promise((resolve, reject) => {
 //     const { status, plan_name, amount, createdAt, subscription_code } = subscriptionData;
@@ -2016,40 +2020,40 @@ app.get('/api/verify/:reference', async (req, res) => {
 //   });
 // };
 
-  // Handle subscription and redirect
-  app.post('/api/subscribe', async (req, res) => {
+// Handle subscription and redirect
+app.post('/api/subscribe', async (req, res) => {
     const { email, amount, name, interval, userId } = req.body;
     console.log('Received Request Data:', req.body);  // Log the request data
-  
+
     try {
-      const planCode = await createPlan(name, interval, amount);
-      console.log('Created Plan Code:', planCode);  // Log the created plan code
-      
-      const authorizationUrl = await initializeTransaction(planCode, email, amount);
-      console.log('Authorization URL:', authorizationUrl);  // Log the authorization URL
-      
-    //   const userId = userId; // Replace with actual userId from your authentication logic
-  
-    //   const subscriptionData = {
-    //     status: 'active',
-    //     plan_name: name,
-    //     amount: amount,
-    //     createdAt: new Date(),
-    //     subscription_code: planCode
-    //   };
-  
-    //   await createSubscriptionInDatabase(subscriptionData, userId);
-    //   console.log('Subscription successfully inserted into the database');
-  
-      res.json({ authorization_url: authorizationUrl });
+        const planCode = await createPlan(name, interval, amount);
+        console.log('Created Plan Code:', planCode);  // Log the created plan code
+
+        const authorizationUrl = await initializeTransaction(planCode, email, amount);
+        console.log('Authorization URL:', authorizationUrl);  // Log the authorization URL
+
+        //   const userId = userId; // Replace with actual userId from your authentication logic
+
+        //   const subscriptionData = {
+        //     status: 'active',
+        //     plan_name: name,
+        //     amount: amount,
+        //     createdAt: new Date(),
+        //     subscription_code: planCode
+        //   };
+
+        //   await createSubscriptionInDatabase(subscriptionData, userId);
+        //   console.log('Subscription successfully inserted into the database');
+
+        res.json({ authorization_url: authorizationUrl });
     } catch (error) {
-      console.error(error);
-      res.status(500).json({ error: 'Something went wrong' });
+        console.error(error);
+        res.status(500).json({ error: 'Something went wrong' });
     }
-  });
-  
-  // List subscriptions
-  app.get('/api/subscriptions', (req, res) => {
+});
+
+// List subscriptions
+app.get('/api/subscriptions', (req, res) => {
     // Query to fetch subscriptions and user emails
     const sql = `
         SELECT
@@ -2078,123 +2082,123 @@ app.get('/api/verify/:reference', async (req, res) => {
         res.status(200).json(results); // Send data to frontend
     });
 });
-  // List transactions
-  const listTransactions = () => {
+// List transactions
+const listTransactions = () => {
     const options = {
-      hostname: 'api.paystack.co',
-      port: 443,
-      path: '/transaction',
-      method: 'GET',
-      headers: {
-        Authorization: 'Bearer sk_test_ba4382c256544e703a5e664af13f87cbd8fb885c',
-        'Content-Type': 'application/json'
-      }
-    };
-  
-    const req = https.request(options, res => {
-      let data = '';
-  
-      res.on('data', chunk => {
-        data += chunk;
-      });
-  
-      res.on('end', () => {
-        try {
-          const parsedData = JSON.parse(data);
-        //   console.log('List Transactions Response:', parsedData);  // Log the response data
-  
-          const transactions = parsedData.data;
-          console.log('Total Transactions:', transactions.length);  // Log the total number of transactions
-  
-          transactions.forEach(transaction => {
-            // console.log('Transaction:', transaction);
-          });
-        } catch (error) {
-          console.error('Error parsing response data:', error);
+        hostname: 'api.paystack.co',
+        port: 443,
+        path: '/transaction',
+        method: 'GET',
+        headers: {
+            Authorization: 'Bearer sk_test_ba4382c256544e703a5e664af13f87cbd8fb885c',
+            'Content-Type': 'application/json'
         }
-      });
-    });
-  
-    req.on('error', error => {
-      console.error('Error fetching transactions:', error);
-    });
-  
-    req.end();
-  };
-  
-  // Call the function to list subscriptions and transactions
-//   listSubscriptions();
-  listTransactions();
+    };
 
-  
-  app.post('/api/feedback', (req, res) => {
+    const req = https.request(options, res => {
+        let data = '';
+
+        res.on('data', chunk => {
+            data += chunk;
+        });
+
+        res.on('end', () => {
+            try {
+                const parsedData = JSON.parse(data);
+                //   console.log('List Transactions Response:', parsedData);  // Log the response data
+
+                const transactions = parsedData.data;
+                console.log('Total Transactions:', transactions.length);  // Log the total number of transactions
+
+                transactions.forEach(transaction => {
+                    // console.log('Transaction:', transaction);
+                });
+            } catch (error) {
+                console.error('Error parsing response data:', error);
+            }
+        });
+    });
+
+    req.on('error', error => {
+        console.error('Error fetching transactions:', error);
+    });
+
+    req.end();
+};
+
+// Call the function to list subscriptions and transactions
+//   listSubscriptions();
+listTransactions();
+
+
+app.post('/api/feedback', (req, res) => {
     const { userId, content = '', rating, roles } = req.body; // Default content to empty string
-  
+
     if (!rating || !userId || !roles) {
-      return res.status(400).json({ message: 'Rating and userId are required' });
+        return res.status(400).json({ message: 'Rating and userId are required' });
     }
-  
+
     // Insert feedback into the database
     const sql = `
       INSERT INTO feedback (userId, content, rating, role)
       VALUES (?, ?, ?, ?)
     `;
-  
-    db.query(sql, [userId, content, rating, roles], (err, results) => {
-      if (err) {
-        console.error('Error executing SQL query:', err);
-        return res.status(500).json({ message: 'Internal server error' });
-      }
-      res.status(201).json({ message: 'Feedback submitted successfully', feedbackId: results.insertId });
-    });
-  });
-  
-  
 
-  //customer trip history 
-  app.get('/customerTripHistory/:userId', (req, res) => {
+    db.query(sql, [userId, content, rating, roles], (err, results) => {
+        if (err) {
+            console.error('Error executing SQL query:', err);
+            return res.status(500).json({ message: 'Internal server error' });
+        }
+        res.status(201).json({ message: 'Feedback submitted successfully', feedbackId: results.insertId });
+    });
+});
+
+
+
+//customer trip history 
+app.get('/customerTripHistory/:userId', (req, res) => {
     const userId = req.params.userId;
-  
+
     const sql = `
       SELECT t.*, p.amount
       FROM trip t
       LEFT JOIN payment p ON t.id = p.tripId
       WHERE t.customerId = ? OR t.driverId = ?
     `;
-  
+
     db.query(sql, [userId, userId], (err, results) => {
-      if (err) {
-        console.error('Error fetching trip history:', err);
-        return res.status(500).json({ message: 'Internal server error' });
-      }
-  
-      if (results.length === 0) {
-        return res.status(404).json({ message: 'No trip history found' });
-      }
-  
-      res.status(200).json(results);
+        if (err) {
+            console.error('Error fetching trip history:', err);
+            return res.status(500).json({ message: 'Internal server error' });
+        }
+
+        if (results.length === 0) {
+            return res.status(404).json({ message: 'No trip history found' });
+        }
+
+        res.status(200).json(results);
     });
-  });
-  
-  
-  ////fetch on-going trip
-  app.get('/api/trips/ongoing/:customerId', (req, res) => {
+});
+
+
+////fetch on-going trip
+app.get('/api/trips/ongoing/:customerId', (req, res) => {
     const customerId = req.params.customerId;
-  
+
     const sql = 'SELECT * FROM trip WHERE customerId = ? AND statuses = "on-going"';
     db.query(sql, [customerId], (err, result) => {
-      if (err) {
-        console.error('Error fetching ongoing trip:', err);
-        return res.status(500).json({ error: 'An error occurred fetching ongoing trip' });
-      }
-      if (result.length === 0) {
-        return res.status(404).json({ error: 'No ongoing trip found' });
-      }
-      res.json(result[0]);
+        if (err) {
+            console.error('Error fetching ongoing trip:', err);
+            return res.status(500).json({ error: 'An error occurred fetching ongoing trip' });
+        }
+        if (result.length === 0) {
+            return res.status(404).json({ error: 'No ongoing trip found' });
+        }
+        res.json(result[0]);
     });
-  });
-  
-  // Endpoint to update payment status
+});
+
+// Endpoint to update payment status
 app.post('/api/update-payment-status', (req, res) => {
     const tripId = req.body.tripId;
     const paymentStatus = req.body.payment_status;
@@ -2236,26 +2240,26 @@ app.get('/api/drivers/:driverId/payment-url', (req, res) => {
     `;
 
     db.query(sql, [driverId], (err, result) => {
-      if (err) {
-        console.error("Error fetching payment URL:", err);
-        return res.status(500).json({ error: "An error occurred while fetching the payment URL" });
-      }
+        if (err) {
+            console.error("Error fetching payment URL:", err);
+            return res.status(500).json({ error: "An error occurred while fetching the payment URL" });
+        }
 
-      if (result.length === 0) {
-        console.log('No driver found with ID:', driverId); // Log if no driver is found
-        return res.status(404).json({ error: "No driver found with the given ID" });
-      }
+        if (result.length === 0) {
+            console.log('No driver found with ID:', driverId); // Log if no driver is found
+            return res.status(404).json({ error: "No driver found with the given ID" });
+        }
 
-      console.log('Payment URL found:', result[0].URL_payment); // Log the found URL
-      return res.status(200).json(result[0]); // Return the payment URL
+        console.log('Payment URL found:', result[0].URL_payment); // Log the found URL
+        return res.status(200).json(result[0]); // Return the payment URL
     });
 });
 
-  
+
 // Endpoint to update payment reference and trip payment status
 app.post('/api/payment-success', (req, res) => {
     const { tripId, reference } = req.body;
-    
+
     if (!tripId || !reference) {
         return res.status(400).json({ error: "Missing tripId or reference" });
     }
@@ -2265,7 +2269,7 @@ app.post('/api/payment-success', (req, res) => {
         SET payment_reference = ?
         WHERE tripId = ?
     `;
-    
+
     const updateTripSql = `
         UPDATE trip
         SET payment_status = 'Yes'
@@ -2383,75 +2387,75 @@ app.get('/api/notifications', (req, res) => {
 });
 
 
- // Generate OTP
- const generateOtp = () => crypto.randomInt(100000, 999999).toString();
-  
+// Generate OTP
+const generateOtp = () => crypto.randomInt(100000, 999999).toString();
+
 // Endpoint to request password reset
 app.post('/forgot-password', async (req, res) => {
     const { email } = req.body;
     const otp = generateOtp();
     const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes from now
-  
+
     if (!email) {
-      return res.status(400).json({ message: 'Email is required' });
+        return res.status(400).json({ message: 'Email is required' });
     }
-  
+
     try {
-      // Insert OTP into database
-      await new Promise((resolve, reject) => {
-        db.query(
-          `INSERT INTO passwordresets (email, otp, expires_at) 
+        // Insert OTP into database
+        await new Promise((resolve, reject) => {
+            db.query(
+                `INSERT INTO passwordresets (email, otp, expires_at) 
            VALUES (?, ?, ?) 
            ON DUPLICATE KEY UPDATE otp = VALUES(otp), expires_at = VALUES(expires_at)`,
-          [email, otp, expiresAt],
-          (err) => {
-            if (err) {
-              return reject(err);
-            }
-            resolve();
-          }
-        );
-      });
-      
-  
-      // Send OTP email
-      await sendOtpEmail(email, otp);
-  
-      return res.status(200).json({ message: 'OTP sent to email' });
-    } catch (err) {
-      console.error('Error in /forgot-password:', err);
-      return res.status(500).json({ message: 'Internal server error' });
-    }
-  });
-  
-
-   // Endpoint to verify OTP
-   app.post('/verify-otp', (req, res) => {
-    const { email, otp } = req.body;
-  
-    db.query('SELECT * FROM passwordresets WHERE email = ? AND otp = ? AND used = 0 AND expires_at > NOW()', [email, otp], (err, results) => {
-      if (err) return res.status(500).json({ message: 'Database error' });
-      if (results.length > 0) {
-        db.query('UPDATE passwordresets SET used = 1 WHERE email = ? AND otp = ?', [email, otp], (err) => {
-          if (err) return res.status(500).json({ message: 'Database error' });
-          res.status(200).json({ message: 'OTP verified successfully' });
+                [email, otp, expiresAt],
+                (err) => {
+                    if (err) {
+                        return reject(err);
+                    }
+                    resolve();
+                }
+            );
         });
-      } else {
-        res.status(400).json({ message: 'Invalid or expired OTP' });
-      }
-    });
-  });
 
-   // Endpoint to reset password
-   app.post('/reset-password', (req, res) => {
+
+        // Send OTP email
+        await sendOtpEmail(email, otp);
+
+        return res.status(200).json({ message: 'OTP sent to email' });
+    } catch (err) {
+        console.error('Error in /forgot-password:', err);
+        return res.status(500).json({ message: 'Internal server error' });
+    }
+});
+
+
+// Endpoint to verify OTP
+app.post('/verify-otp', (req, res) => {
+    const { email, otp } = req.body;
+
+    db.query('SELECT * FROM passwordresets WHERE email = ? AND otp = ? AND used = 0 AND expires_at > NOW()', [email, otp], (err, results) => {
+        if (err) return res.status(500).json({ message: 'Database error' });
+        if (results.length > 0) {
+            db.query('UPDATE passwordresets SET used = 1 WHERE email = ? AND otp = ?', [email, otp], (err) => {
+                if (err) return res.status(500).json({ message: 'Database error' });
+                res.status(200).json({ message: 'OTP verified successfully' });
+            });
+        } else {
+            res.status(400).json({ message: 'Invalid or expired OTP' });
+        }
+    });
+});
+
+// Endpoint to reset password
+app.post('/reset-password', (req, res) => {
     const { email, newPassword } = req.body;
     // const hashedPassword = bcrypt.hashSync(newPassword, 8);
-  
+
     db.query('UPDATE users SET password = ? WHERE email = ?', [newPassword, email], (err) => {
-      if (err) return res.status(500).json({ message: 'Database error' });
-      res.status(200).json({ message: 'Password updated successfully' });
+        if (err) return res.status(500).json({ message: 'Database error' });
+        res.status(200).json({ message: 'Password updated successfully' });
     });
-  }); 
+});
 
 
 //update drivere state
@@ -2523,17 +2527,17 @@ app.post('/api/update-state', (req, res) => {
     }
 });
 
-  
+
 
 //get the state time from the driver
 app.get('/api/get-online-time/:userId', (req, res) => {
     const { userId } = req.params;
-    
+
     db.query('SELECT online_time, last_online_timestamp, state FROM driver WHERE users_id = ?', [userId], (error, results) => {
         if (error) {
             return res.status(500).send('Error fetching online time');
         }
-        
+
         const { online_time, last_online_timestamp, state } = results[0];
         res.send({ online_time, last_online_timestamp, state });
     });
@@ -2586,31 +2590,31 @@ app.put('/driver_documents/:id', upload.fields([
 //insert disability information
 app.post('/api/disability', async (req, res) => {
     const { customerId, have_disability, disability_type, additional_details } = req.body;
-  
+
     try {
-      const query = `
+        const query = `
         INSERT INTO disability (user_id, have_disability, disability_type, additional_details)
         VALUES (?, ?, ?, ?)
       `;
-      const values = [
-        customerId, 
-        have_disability === true ? 1 : 0, // Convert boolean to integer
-        disability_type || null, // Handle case if no disability type is selected
-        additional_details || null // Handle case if no additional details are provided
-      ];
-  
-      await db.query(query, values);
-  
-      res.status(201).json({ message: 'Disability information saved successfully.' });
+        const values = [
+            customerId,
+            have_disability === true ? 1 : 0, // Convert boolean to integer
+            disability_type || null, // Handle case if no disability type is selected
+            additional_details || null // Handle case if no additional details are provided
+        ];
+
+        await db.query(query, values);
+
+        res.status(201).json({ message: 'Disability information saved successfully.' });
     } catch (error) {
-      console.error('Error saving disability information:', error);
-      res.status(500).json({ error: 'An error occurred while saving disability information.' });
+        console.error('Error saving disability information:', error);
+        res.status(500).json({ error: 'An error occurred while saving disability information.' });
     }
-  });
-  
-  
+});
+
+
 // get profile pictures
-  app.get('/api/get-profile-picture/:userId', (req, res) => {
+app.get('/api/get-profile-picture/:userId', (req, res) => {
     const userId = req.params.userId;
 
     const query = `SELECT profile_picture FROM users WHERE id = ?`;
@@ -2632,7 +2636,7 @@ app.post('/api/disability', async (req, res) => {
 app.get('/api/trips/total', (req, res) => {
     // Query to count all rows in the trip table
     const query = 'SELECT COUNT(*) AS total_trips FROM trip';
-    
+
     db.query(query, (err, result) => {
         if (err) {
             // Log the error and send a 500 status code if there's a server error
@@ -2656,7 +2660,7 @@ app.get('/api/trips/total', (req, res) => {
 app.get('/api/trips/cancelled', (req, res) => {
     // Query to count cancelled trips
     const query = 'SELECT COUNT(*) AS cancelled_trips FROM trip WHERE cancellation_reason IS NOT NULL';
-    
+
     db.query(query, (err, result) => {
         if (err) {
             // Log the error and send a 500 status code if there's a server error
@@ -2680,34 +2684,34 @@ app.get('/api/trips/cancelled', (req, res) => {
 app.get('/api/trips/completed', (req, res) => {
     const query = 'SELECT COUNT(*) AS completed_trips FROM trip WHERE statuses = ?';
     const statusCompleted = 'completed'; // Adjust according to your status values
-  
-    db.query(query, [statusCompleted], (err, result) => {
-      if (err) {
-        console.error('Error fetching completed trips:', err);
-        return res.status(500).send({ error: 'Server error' });
-      }
-  
-      if (result.length > 0) {
-        res.send({ completedTrips: result[0].completed_trips });
-      } else {
-        res.status(404).send({ error: 'No completed trips found' });
-      }
-    });
-  });
 
-  //Endpoint to fetch total revenue of all trips
-  app.get('/api/trips/payments/total', (req, res) => {
-    const query = 'SELECT SUM(amount) AS total_payment FROM payment';
-  
-    db.query(query, (err, result) => {
-      if (err) {
-        console.error('Error fetching total payments:', err);
-        return res.status(500).send({ error: 'Server error' });
-      }
-  
-      res.send({ total_payment: result[0].total_payment || 0 });
+    db.query(query, [statusCompleted], (err, result) => {
+        if (err) {
+            console.error('Error fetching completed trips:', err);
+            return res.status(500).send({ error: 'Server error' });
+        }
+
+        if (result.length > 0) {
+            res.send({ completedTrips: result[0].completed_trips });
+        } else {
+            res.status(404).send({ error: 'No completed trips found' });
+        }
     });
-  });
+});
+
+//Endpoint to fetch total revenue of all trips
+app.get('/api/trips/payments/total', (req, res) => {
+    const query = 'SELECT SUM(amount) AS total_payment FROM payment';
+
+    db.query(query, (err, result) => {
+        if (err) {
+            console.error('Error fetching total payments:', err);
+            return res.status(500).send({ error: 'Server error' });
+        }
+
+        res.send({ total_payment: result[0].total_payment || 0 });
+    });
+});
 
 
 // Endpoint to fetch admins
@@ -2723,7 +2727,7 @@ app.get('/admins', (req, res) => {
     });
 });
 
-  
+
 //edit admin
 app.put('/edit_admin/:adminId', (req, res) => {
     const adminId = req.params.adminId;
@@ -2755,10 +2759,10 @@ app.put('/edit_admin/:adminId', (req, res) => {
 });
 
 
-  
-  // Delete Admin
-  
-  app.delete('/delete_admin/:adminId', (req, res) => {
+
+// Delete Admin
+
+app.delete('/delete_admin/:adminId', (req, res) => {
     const adminId = req.params.adminId;
     const deleteAdminQuery = "DELETE FROM users WHERE id = ?";
 
@@ -2823,7 +2827,7 @@ const sendPasswordEmail = (email, password) => {
     return transporter.sendMail(mailOptions);
 };
 
-  
+
 //fetch the latest subscription
 // Define the endpoint
 app.get('/api/fetchsubscriptions', (req, res) => {
@@ -2856,33 +2860,33 @@ app.get('/api/fetchsubscriptions', (req, res) => {
 
 //-------------------------------------------------------------------------------------------------------------------------
 
-   // POST endpoint to handle card details submission
-   app.post("/api/cards", (req, res) => {
+// POST endpoint to handle card details submission
+app.post("/api/cards", (req, res) => {
     console.log("Request Body:", req.body);
-  
+
     const { cardNumber, userId } = req.body;
-  
+
     if (!cardNumber || !userId) {
-      return res.status(400).json({ message: "Card number and user ID are required" });
+        return res.status(400).json({ message: "Card number and user ID are required" });
     }
-  
+
     // Additional validation can be added here
-  
+
     const query = "INSERT INTO cards (card_number, user_id) VALUES (?, ?)";
     db.query(query, [cardNumber, userId], (err, result) => {
-      if (err) {
-        console.error("Error inserting card data:", err);
-        return res.status(500).json({ message: "Database error" });
-      }
-      res.status(201).json({ message: "Card details saved successfully", cardId: result.insertId });
+        if (err) {
+            console.error("Error inserting card data:", err);
+            return res.status(500).json({ message: "Database error" });
+        }
+        res.status(201).json({ message: "Card details saved successfully", cardId: result.insertId });
     });
-  });
-  
-  
-  
-  
+});
 
-   // GET endpoint to retrieve saved cards (mocking user_id as 1 for this example)
+
+
+
+
+// GET endpoint to retrieve saved cards (mocking user_id as 1 for this example)
 // GET endpoint to retrieve saved cards
 app.get("/api/cards", (req, res) => {
     const { userId } = req.query; // Get the userId from the query parameters
@@ -2906,28 +2910,28 @@ app.get("/api/cards", (req, res) => {
 // DELETE endpoint to delete a card by its ID
 app.delete("/api/cards/:id", (req, res) => {
     const cardId = req.params.id;
-  
+
     // Check if cardId is provided
     if (!cardId) {
-      return res.status(400).json({ message: "Card ID is required" });
+        return res.status(400).json({ message: "Card ID is required" });
     }
-  
+
     // Delete the card from the database
     const query = "DELETE FROM cards WHERE id = ?";
     db.query(query, [cardId], (err, result) => {
-      if (err) {
-        console.error("Error deleting card:", err);
-        return res.status(500).json({ message: "Error deleting card" });
-      }
-  
-      if (result.affectedRows === 0) {
-        return res.status(404).json({ message: "Card not found" });
-      }
-  
-      res.status(200).json({ message: "Card deleted successfully" });
+        if (err) {
+            console.error("Error deleting card:", err);
+            return res.status(500).json({ message: "Error deleting card" });
+        }
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ message: "Card not found" });
+        }
+
+        res.status(200).json({ message: "Card deleted successfully" });
     });
-  });
-  
+});
+
 //-------------------------------------------------------------------------------------------------------------------------
 //Get Wallet Balance
 app.get('/balance', (req, res) => {
@@ -3211,11 +3215,11 @@ app.post('/api/verify/trip', async (req, res) => {
 // Endpoint to get card information by user_id
 app.get('/api/cards/:userId', async (req, res) => {
     const userId = parseInt(req.params.userId, 10);
-  
+
     if (isNaN(userId)) {
         return res.status(400).json({ error: 'Invalid user ID' });
     }
-  
+
     const selectQuery = 'SELECT card_number FROM cards WHERE user_id = ?';
 
     db.query(selectQuery, [userId], (err, results) => {
@@ -3231,6 +3235,7 @@ app.get('/api/cards/:userId', async (req, res) => {
     });
 });
 
+// API route to update driver location
 app.put('/api/driver/update-location/:id', async (req, res) => {
     const driverId = parseInt(req.params.id, 10);
     const { current_lat, current_lng } = req.body;
@@ -3265,7 +3270,7 @@ app.put('/api/driver/update-location/:id', async (req, res) => {
         }
 
         console.log(`Location updated successfully for driver ID ${driverId}`);
-        
+
         // Send success response
         return res.status(200).json({ message: 'Location updated successfully' });
     });
@@ -3307,6 +3312,7 @@ app.get('/api/drivers/nearby', async (req, res) => {
     });
 });
 
+
 app.get('/driverDetails/:userId', (req, res) => {
     const userId = req.params.userId;
 
@@ -3345,6 +3351,115 @@ app.get('/driverDetails/:userId', (req, res) => {
 
         // Return the user, driver, and car details
         return res.status(200).json(results[0]); // Return the first result as it should be unique by userId
+    });
+});
+
+
+app.get('/api/driver-details/:driverId', (req, res) => {
+    const driverId = req.params.driverId;
+
+    // Query to fetch driver details from the users table
+    const driverQuery = `
+        SELECT name, lastName, phoneNumber, id 
+        FROM users 
+        WHERE id = ?`;
+
+    // Query to fetch car details from the car_listing table
+    const carQuery = `
+        SELECT license_plate, car_colour, car_model 
+        FROM car_listing 
+        WHERE userId = ?`;
+
+    // Query to fetch photo from the driver table
+    const driverPhotoQuery = `
+        SELECT photo 
+        FROM driver 
+        WHERE users_id = ?`;
+
+    // Query to fetch tripId from the trip table using driverId
+    const tripQuery = `
+        SELECT id
+        FROM trip
+        WHERE driverId = ?`;
+
+    // Query to fetch amount from the payment table
+    const paymentQuery = `
+        SELECT amount 
+        FROM payment 
+        WHERE tripId = ?`;
+
+    // Step 1: Fetch driver details
+    db.query(driverQuery, [driverId], (err, driverResults) => {
+        if (err) {
+            console.error('Error fetching driver details:', err);
+            return res.status(500).json({ error: 'Internal server error' });
+        }
+
+        if (driverResults.length === 0) {
+            return res.status(404).json({ error: 'Driver details not found' });
+        }
+
+        // Step 2: Fetch car details
+        db.query(carQuery, [driverId], (err, carResults) => {
+            if (err) {
+                console.error('Error fetching car details:', err);
+                return res.status(500).json({ error: 'Internal server error' });
+            }
+
+            if (carResults.length === 0) {
+                return res.status(404).json({ error: 'Car details not found' });
+            }
+
+            // Step 3: Fetch driver photo
+            db.query(driverPhotoQuery, [driverId], (err, photoResults) => {
+                if (err) {
+                    console.error('Error fetching driver photo:', err);
+                    return res.status(500).json({ error: 'Internal server error' });
+                }
+
+                if (photoResults.length === 0) {
+                    return res.status(404).json({ error: 'Driver photo not found' });
+                }
+
+                // Step 4: Fetch tripId using driverId
+                db.query(tripQuery, [driverId], (err, tripResults) => {
+                    if (err) {
+                        console.error('Error fetching tripId:', err);
+                        return res.status(500).json({ error: 'Internal server error' });
+                    }
+
+                    if (tripResults.length === 0) {
+                        return res.status(404).json({ error: 'Trip details not found for this driver' });
+                    }
+
+                    const tripId = tripResults[0].tripId;
+
+                    // Step 5: Fetch payment details using tripId
+                    // Step 5: Fetch payment details using tripId
+                    db.query(paymentQuery, [tripId], (err, paymentResults) => {
+                        if (err) {
+                            console.error('Error fetching payment details:', err);
+                            return res.status(500).json({ error: 'Internal server error' });
+                        }
+
+                        // Return a default value or a different message if payment details are not found
+                        const amount = paymentResults.length > 0 ? paymentResults[0].amount : null;
+
+                        // Step 6: Send combined response
+                        res.status(200).json({
+                            driver: {
+                                ...driverResults[0],
+                                photo: photoResults[0].photo,
+                            },
+                            carDetails: carResults[0],
+                            amount: amount,
+                            message: amount ? 'Payment details found' : 'Payment details not found'
+                        });
+                    });
+
+                });
+            });
+        });
     });
 });
 
