@@ -1522,6 +1522,8 @@ app.get('/api/user-trip-details-pending', (req, res) => {
           t.currentDate, 
           t.pickUpLocation, 
           t.dropOffLocation, 
+          t.pickUpCoordinates,
+          t.dropOffCoordinates,
           t.statuses, 
           t.customer_rating, 
           t.customer_feedback, 
@@ -1563,8 +1565,15 @@ app.get('/api/user-trip-details-pending', (req, res) => {
             console.error("Error executing SQL query:", err);
             return res.status(500).json({ message: "Internal server error" });
         }
+
+        // Extract pickUpCoordinates from each result
+        const pickUpCoordinatesList = results.map(result => result.pickUpCoordinates);
+
         console.log("SQL query results:", results);
-        return res.json(results);
+        console.log("pickUpCoordinates results:", pickUpCoordinatesList);
+
+        // Return full data along with extracted pickUpCoordinates
+        return res.status(200).json({ results, pickUpCoordinates: pickUpCoordinatesList });
     });
 });
 
@@ -3463,6 +3472,101 @@ app.get('/api/driver-details/:driverId', (req, res) => {
     });
 });
 
+app.get('/api/trips/:tripId', (req, res) => {
+    const tripId = req.params.tripId;
+    const query = 'SELECT pickUpCoordinates FROM trip WHERE id = ?'; // Correct SQL query
+
+    db.query(query, [tripId], (err, results) => {
+        if (err) {
+            console.error('Database error:', err); // Log error details on server side
+            return res.status(500).json({ message: 'Error fetching trip details', error: err.message });
+        }
+
+        if (results.length === 0) {
+            return res.status(404).json({ message: 'Trip not found' });
+        }
+
+        // Log the results to verify that the data is being fetched correctly
+        console.log('Trip details fetched:', results[0]);
+
+        return res.status(200).json({ pickUpCoordinates: results[0].pickUpCoordinates });
+    });
+});
+
+app.put('/api/driverPosition', (req, res) => {
+    const { driverId, location } = req.body;  // Destructuring the location data from the request body
+
+    // Check if driverId and location are provided
+    if (!driverId || !location || !location.lat || !location.lng) {
+        return res.status(400).send('Driver ID and location (lat, lng) are required.');
+    }
+
+    // Prepare SQL query to update the driver location
+    const query = `
+        UPDATE driver 
+        SET location = ? 
+        WHERE users_id = ?;
+    `;
+
+    // Execute the query
+    db.query(query, [JSON.stringify(location), driverId], (err, results) => {
+        if (err) {
+            console.error('Error updating driver location:', err);
+            return res.status(500).send('Error updating driver location');
+        }
+
+        // Check if any rows were updated (i.e., the driver was found)
+        if (results.affectedRows === 0) {
+            return res.status(404).send('Driver not found');
+        }
+
+        // Respond with success
+        res.status(200).send('Driver location updated successfully');
+    });
+});
+//get driver location
+app.get('/api/driver/:driverId', (req, res) => {
+    const driverId = req.params.driverId;
+
+    if (!driverId) {
+        return res.status(400).json({ error: "Driver ID is required" });
+    }
+
+    // SQL query to fetch the driver location
+    const sql = `
+        SELECT location 
+        FROM driver 
+        WHERE users_id = ?`;
+
+    // Execute the SQL query
+    db.query(sql, [driverId], (err, results) => {
+        if (err) {
+            console.error("Error fetching driver location by user ID:", err);
+            return res.status(500).json({ error: "An error occurred while fetching driver location" });
+        }
+
+        // Check if the driver exists
+        if (results.length === 0) {
+            return res.status(404).json({ message: "Driver not found" });
+        }
+
+        // Parse the location field from the first result
+        try {
+            const location = JSON.parse(results[0].location);
+
+            // Ensure that the location contains lat and lng properties
+            if (location && location.lat && location.lng) {
+                console.log("Driver location:", location);
+                return res.status(200).json({ location });
+            } else {
+                return res.status(400).json({ error: "Invalid location format" });
+            }
+        } catch (parseError) {
+            console.error("Error parsing location:", parseError);
+            return res.status(500).json({ error: "Failed to parse location data" });
+        }
+    });
+});
 
 
 
