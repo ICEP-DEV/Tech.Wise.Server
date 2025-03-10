@@ -1,0 +1,44 @@
+    <View style={styles.container}>
+      <Pressable onPress={() => navigation.goBack()} style={styles.overlay} />
+      <BlurView intensity={70} tint="light" style={styles.blurView}>
+        <Pressable onPress={() => navigation.goBack()} style={styles.cancelContainer}>
+          <Text style={styles.cancelText}>Cancel</Text>
+        </Pressable>
+        <View style={styles.headerContainer}>
+          <Text style={styles.headerText}>Choose Your Ride</Text>
+        </View>
+        <SectionList
+          sections={carTypeData}
+          keyExtractor={(item) => item.id}
+          renderSectionHeader={({ section: { title } }) => (
+            <Text style={styles.sectionHeader}>{title}</Text>
+          )}
+          renderItem={({ item }) => (
+            <Pressable onPress={() => handleItemPress(item)} style={styles.itemContainer}>
+              <Image source={item.image} style={styles.carImage} />
+              <View style={styles.carInfo}>
+                <Text style={styles.carName}>{item.name}</Text>
+                <Text style={styles.carNote}>{item.note}</Text>
+                <View style={styles.promotionContainer}>
+                  <View style={styles.iconTextRow}>
+                    <Icon
+                      name="account"
+                      type="material-community"
+                      size={16}
+                      color="gray"
+                      style={{ marginRight: 5 }}
+                    />
+                    <Text style={styles.promotionText}>{item.seats}</Text>
+                  </View>
+                  <Text style={styles.carPrice}>R{item.price}</Text>
+                </View>
+              </View>
+            </Pressable>
+          )}
+        />
+      </BlurView>
+    </View>
+  );
+};
+
+export default CarListingBottomSheet;
