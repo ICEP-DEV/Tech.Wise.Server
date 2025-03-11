@@ -1,7 +1,7 @@
 const express = require("express");
 const axios = require("axios");
 const router = express.Router();
-const db = require("../config/config");
+const pool = require("../config/config"); // Use pool for database connection
 require("dotenv").config();
 
 // Middleware to parse incoming webhook requests
@@ -37,26 +37,35 @@ router.get("/payment-callback", async (req, res) => {
             console.log(`Verification ID: ${verification_id}`);
             console.log(`Customer Code: ${customer_code}`);
 
-            // Update the database
+            // Update the database using the connection pool
             const updateSql = `
                 UPDATE subscriptions 
                 SET paystack_subscription_id = ?, verification_id = ?, statuses = 'completed'
                 WHERE customer_code = ?
             `;
 
-            db.query(updateSql, [paystack_subscription_id, verification_id, customer_code], (err) => {
+            pool.getConnection((err, connection) => {
                 if (err) {
-                    console.error("Database Update Error:", err);
-                    return res.status(500).json({ error: "Database update failed" });
+                    console.error("Database Connection Error:", err);
+                    return res.status(500).json({ error: "Database connection failed" });
                 }
 
-                console.log("Subscription updated successfully!");
+                connection.query(updateSql, [paystack_subscription_id, verification_id, customer_code], (error) => {
+                    connection.release(); // Release connection back to the pool
 
-                // Send the correct response format
-                return res.json({
-                    paystack_subscription_id: paystack_subscription_id || "Not Found",
-                    verification_id,
-                    customer_code
+                    if (error) {
+                        console.error("Database Update Error:", error);
+                        return res.status(500).json({ error: "Database update failed" });
+                    }
+
+                    console.log("Subscription updated successfully!");
+
+                    // Send the correct response format
+                    return res.json({
+                        paystack_subscription_id: paystack_subscription_id || "Not Found",
+                        verification_id,
+                        customer_code
+                    });
                 });
             });
         } else {
