@@ -1,17 +1,16 @@
-
 const express = require('express');
 const router = express.Router();
 const cors = require('cors');
 const multer = require('multer');
 const path = require('path');
-const mysql = require('mysql');
-// const
+const pool = require('../config/config'); // Import MySQL connection pool
+
 const app = express();
 
 // Middleware
 app.use(cors({
   origin: '*',  // Replace with your frontend URL
-  methods: ['*', 'GET', 'POST', 'PUT', 'DELETE'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type'],
 }));
 app.use(express.json());
@@ -28,8 +27,7 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
-
-
+// 🚗 **Car Listing Route**
 router.post('/car_listing', upload.single('carImage'), (req, res) => {
     if (req.fileValidationError) {
         return res.status(400).json({ error: req.fileValidationError });
@@ -45,20 +43,31 @@ router.post('/car_listing', upload.single('carImage'), (req, res) => {
         return res.status(400).json({ error: "All fields are required" });
     }
 
-    const sql = "INSERT INTO car_listing (car_make, car_model, car_year, number_of_seats, car_colour, car_image, license_plate, userId) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
-    const values = [carMaker, carModel, carYear, carSeats, carColor, imageName, licensePlate, userId];
+    const sql = `
+        INSERT INTO car_listing 
+        (car_make, car_model, car_year, number_of_seats, car_colour, car_image, license_plate, userId) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `;
 
-    db.query(sql, values, (err, result) => {
+    pool.getConnection((err, connection) => {
         if (err) {
-            console.error("Error inserting car details:", err);
-            return res.status(500).json({ error: "Failed to save car details" });
+            console.error("Database connection failed:", err);
+            return res.status(500).json({ error: "Database connection error" });
         }
-        return res.status(200).json({ message: "Car details saved successfully" });
+
+        connection.query(sql, [carMaker, carModel, carYear, carSeats, carColor, imageName, licensePlate, userId], (error, result) => {
+            connection.release(); // Release connection back to pool
+
+            if (error) {
+                console.error("Error inserting car details:", error);
+                return res.status(500).json({ error: "Failed to save car details" });
+            }
+            return res.status(200).json({ message: "Car details saved successfully" });
+        });
     });
 });
 
-
-// Endpoint to get car listings by userId
+// 🚗 **Get Car Listings by User ID**
 router.get('/car_listing/user', (req, res) => {
     const userId = req.query.userId;
 
@@ -67,11 +76,22 @@ router.get('/car_listing/user', (req, res) => {
     }
 
     const sql = "SELECT * FROM car_listing WHERE userId = ?";
-    db.query(sql, [userId], (err, results) => {
+
+    pool.getConnection((err, connection) => {
         if (err) {
-            return res.status(500).json({ error: "Error fetching car details" });
+            console.error("Database connection failed:", err);
+            return res.status(500).json({ error: "Database connection error" });
         }
-        return res.status(200).json({ carListings: results });
+
+        connection.query(sql, [userId], (error, results) => {
+            connection.release(); // Release connection back to pool
+
+            if (error) {
+                console.error("Error fetching car details:", error);
+                return res.status(500).json({ error: "Error fetching car details" });
+            }
+            return res.status(200).json({ carListings: results });
+        });
     });
 });
 
