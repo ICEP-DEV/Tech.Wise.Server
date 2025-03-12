@@ -19,20 +19,21 @@ router.post('/trips', async (req, res) => {
         return res.status(400).json({ error: "Required fields are missing" });
     }
 
-    // Convert coordinates to geographic points for MySQL
-    const pickUpPoint = `POINT(${pickUpCoordinates.longitude} ${pickUpCoordinates.latitude})`;
-    const dropOffPoint = `POINT(${dropOffCoordinates.longitude} ${dropOffCoordinates.latitude})`;
-    console.log('Pickup Point:', pickUpPoint, 'Dropoff Point:', dropOffPoint);
+    // Extract latitude and longitude from request body
+    const pickUpLatitude = pickUpCoordinates.latitude;
+    const pickUpLongitude = pickUpCoordinates.longitude;
+    const dropOffLatitude = dropOffCoordinates.latitude;
+    const dropOffLongitude = dropOffCoordinates.longitude;
 
-    // SQL query for inserting trip data with `payment_status = 'pending'`
+    // SQL query for inserting trip data
     const sql = `
     INSERT INTO trips (
         customerId, driverId, requestDate, currentDate, pickUpLocation, dropOffLocation, statuses,
         customer_rating, customer_feedback, duration_minutes, vehicle_type, distance_traveled, 
-        cancellation_reason, cancel_by, pickupTime, dropOffTime, pickUpCoordinates, dropOffCoordinates, 
-        payment_status
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ST_GeomFromText(?), ST_GeomFromText(?), ?)
-`;
+        cancellation_reason, cancel_by, pickupTime, dropOffTime, pickUpLatitude, pickUpLongitude, 
+        dropOffLatitude, dropOffLongitude, payment_status
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `;
 
     pool.getConnection((err, connection) => {
         if (err) {
@@ -43,10 +44,8 @@ router.post('/trips', async (req, res) => {
         connection.query(sql, [
             customerId, driverId, requestDate, currentDate, pickUpLocation, dropOffLocation, statuses,
             customer_rating, customer_feedback, duration_minutes, vehicle_type, distance_traveled, 
-            cancellation_reason, cancel_by, pickupTime, dropOffTime, 
-            `POINT(${pickUpCoordinates.longitude} ${pickUpCoordinates.latitude})`, 
-            `POINT(${dropOffCoordinates.longitude} ${dropOffCoordinates.latitude})`, 
-            payment_status
+            cancellation_reason, cancel_by, pickupTime, dropOffTime, pickUpLatitude, pickUpLongitude, 
+            dropOffLatitude, dropOffLongitude, payment_status
         ], (err, result) => {
             connection.release(); // Release connection back to the pool
 
@@ -58,7 +57,6 @@ router.post('/trips', async (req, res) => {
             const tripId = result.insertId; // Get the inserted trip ID
             console.log("Trip inserted into MySQL with ID:", tripId);
 
-            // Step 2: Respond back with success message and tripId
             return res.status(200).json({ message: "Trip data saved successfully", tripId: tripId });
         });
     });
