@@ -183,25 +183,68 @@ router.get('/driverTrips/:driverId', (req, res) => {
     const query = `
         SELECT * FROM trips
         WHERE driverId = ? AND status = 'pending'
+        LIMIT 10; -- Optionally limit the number of trips for performance
     `;
 
     pool.getConnection((err, connection) => {
         if (err) {
             console.error('Database Connection Error:', err);
-            return res.status(500).send('Error fetching trips');
+            return res.status(500).send({ message: 'Error fetching trips' });
         }
 
-        connection.query(query, [driverId], (err, results) => {
-            connection.release(); // Release connection back to the pool
+        // Set a timeout for the query to avoid hanging
+        connection.query({ sql: query, timeout: 10000 }, [driverId], (err, results) => {
+            connection.release();
 
             if (err) {
-                console.error('Error fetching trips:', err);
-                return res.status(500).send('Error fetching trips');
+                console.error('Error with query:', err);
+                return res.status(500).send({ message: 'Error with database query', error: err });
             }
 
-            res.json(results); // Return the fetched trips
+            // Check if no trips are found
+            if (results.length === 0) {
+                return res.status(404).send({ message: 'No pending trips found' });
+            }
+
+            // Send the list of pending trips as the response
+            res.json(results);
         });
     });
 });
 
+// Update trip status when a driver accepts or declines
+router.put('/trips/:id/status', (req, res) => {
+    const { id } = req.params;
+    const { status, cancellation_reason, cancel_by } = req.body;
+  
+    // Ensure only valid statuses are accepted
+    const validStatuses = ['pending', 'completed', 'cancelled', 'accepted'];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({ error: "Invalid status value" });
+    }
+  
+    // Prepare SQL query to update trip status and other details
+    const sql = `
+      UPDATE trips 
+      SET statuses = ?, cancellation_reason = ?, cancel_by = ? 
+      WHERE id = ?
+    `;
+  
+    db.query(sql, [status, cancellation_reason, cancel_by, id], (err, result) => {
+      if (err) {
+        console.error("Error updating trip status:", err);
+        return res.status(500).json({ error: "Error updating trip status" });
+      }
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ error: "Trip not found" });
+      }
+  
+      // Emit event to notify users about the status change
+      const io = req.app.get('io');
+      io.emit('tripStatusUpdated', { tripId: id, status });
+  
+      res.status(200).json({ message: `Trip status updated to ${status}`, tripId: id });
+    });
+  });
+  
 module.exports = router;
