@@ -41,29 +41,31 @@ router.post('/trips', async (req, res) => {
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
+    let connection;
     try {
-        const connection = await pool.getConnection();
-        try {
-            const [result] = await connection.query(sql, [
-                customerId, driverId, requestDate, currentDate, pickUpLocation, dropOffLocation, statuses,
-                customer_rating, customer_feedback, duration_minutes, vehicle_type, distance_traveled, 
-                cancellation_reason, cancel_by, pickupTime, dropOffTime, pickUpLatitude, pickUpLongitude, 
-                dropOffLatitude, dropOffLongitude, payment_status, // Add these fields if you want them to be passed
-                null, null, // Placeholder for `driver_ratings` and `driver_feedback` if not provided
-                null // Placeholder for `duration_minutes_driver_to_pickup` if not provided
-            ]);
+        connection = await pool.getConnection();  // Get the connection from the pool
 
-            const tripId = result.insertId;
-            console.log("Trip inserted into MySQL with ID:", tripId);
+        const [result] = await connection.query(sql, [
+            customerId, driverId, requestDate, currentDate, pickUpLocation, dropOffLocation, statuses,
+            customer_rating, customer_feedback, duration_minutes, vehicle_type, distance_traveled, 
+            cancellation_reason, cancel_by, pickupTime, dropOffTime, pickUpLatitude, pickUpLongitude, 
+            dropOffLatitude, dropOffLongitude, payment_status, // Add these fields if you want them to be passed
+            null, null, // Placeholder for `driver_ratings` and `driver_feedback` if not provided
+            null // Placeholder for `duration_minutes_driver_to_pickup` if not provided
+        ]);
 
-            return res.status(201).json({ message: "Trip data saved successfully", tripId });
+        const tripId = result.insertId;
+        console.log("Trip inserted into MySQL with ID:", tripId);
 
-        } finally {
-            connection.release(); // Always release the connection
-        }
+        return res.status(201).json({ message: "Trip data saved successfully", tripId });
+
     } catch (err) {
         console.error("Database Error:", err.message);
         return res.status(500).json({ error: "Database error, please try again", details: err.message });
+    } finally {
+        if (connection) {
+            connection.release();  // Always release the connection, even in case of error
+        }
     }
 });
 
