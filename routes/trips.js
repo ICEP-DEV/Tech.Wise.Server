@@ -200,14 +200,22 @@ router.get('/driverTrips/:driverId', (req, res) => {
             return res.status(500).send('Error fetching trips');
         }
 
-        connection.query('SELECT 1', (err, results) => {
+        // Execute the query to fetch pending trips
+        connection.query(query, [driverId], (err, results) => {
             connection.release();
 
             if (err) {
-                console.error('Error with simple query:', err);
+                console.error('Error with query:', err);
                 return res.status(500).send('Error with database query');
             }
-            res.send('Database connection works');
+
+            // Check if no trips are found
+            if (results.length === 0) {
+                return res.status(404).send('No pending trips found');
+            }
+
+            // Send the list of pending trips as the response
+            res.json(results);
         });
     });
 });
