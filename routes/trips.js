@@ -80,10 +80,10 @@ router.post('/trips', async (req, res) => {
         // Execute the query
         const [result] = await connection.execute(sql, [
             customerId, driverId, requestDate, currentDate, pickUpLocation, dropOffLocation, statuses,
-            customer_rating, customer_feedback, duration_minutes, vehicle_type, distance_traveled, 
-            cancellation_reason, cancel_by, pickupTime, dropOffTime, 
+            customer_rating, customer_feedback, duration_minutes, vehicle_type, distance_traveled,
+            cancellation_reason, cancel_by, pickupTime, dropOffTime,
             pickUpLatitude, pickUpLongitude, // Insert latitudes and longitudes as DOUBLE values
-            dropOffLatitude, dropOffLongitude, 
+            dropOffLatitude, dropOffLongitude,
             payment_status
         ]);
 
@@ -139,7 +139,7 @@ router.post('/trips/update-location', async (req, res) => {
 
     try {
         const tripRef = firestoreDb.collection('trips').doc(`${tripId}`);
-        
+
         // Push the new location update to the 'route' array
         await tripRef.update({
             route: firestoreDb.FieldValue.arrayUnion({
@@ -228,7 +228,7 @@ router.get('/driverTrips', async (req, res) => {
 
     try {
         const startTime = Date.now(); // Log query start time
-        const [rows] = await pool.query(sql, [driverId]); 
+        const [rows] = await pool.query(sql, [driverId]);
         console.log(`Query executed in ${Date.now() - startTime} ms`);
 
         if (rows.length > 0) {
@@ -242,7 +242,7 @@ router.get('/driverTrips', async (req, res) => {
     }
 });
 
-  
+
 
 
 
@@ -263,14 +263,19 @@ router.put('/trips/:id/status', async (req, res) => {
 
     // Prepare SQL query to update trip status and other details
     const sql = `
-      UPDATE trips 
-      SET statuses = ?, cancellation_reason = ?, cancel_by = ? 
-      WHERE id = ?
-    `;
+    UPDATE trips 
+    SET statuses = ?, cancellation_reason = ?, cancel_by = ? 
+    WHERE id = ?
+  `;
+
+
+    const cancellationReasonValue = cancellation_reason || null;
+    const cancelByValue = cancel_by || null;
 
     try {
+        // Update the values conditionally
         const startTime = Date.now(); // Log query start time
-        const [result] = await pool.query(sql, [status, cancellation_reason, cancel_by, id]);
+        const [result] = await pool.query(sql, [status, cancellationReasonValue, cancelByValue, id]);
         console.log(`Query executed in ${Date.now() - startTime} ms`);
 
         // Check the result of the update query
