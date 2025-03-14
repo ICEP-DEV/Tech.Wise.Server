@@ -242,10 +242,6 @@ router.get('/driverTrips', async (req, res) => {
     }
 });
 
-
-
-
-
 // Update trip status when a driver accepts or declines
 router.put('/trips/:id/status', async (req, res) => {
     const { id } = req.params;
