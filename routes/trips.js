@@ -128,7 +128,7 @@ router.post('/trips/update-location', async (req, res) => {
 });
 
 // Car listing data
-router.get('/api/car-listings', (req, res) => {
+router.get('/api/car-listings', async (req, res) => {
     const sql = `
         SELECT 
             v.id AS id,
@@ -161,34 +161,25 @@ router.get('/api/car-listings', (req, res) => {
             d.pdp AS driverPdp,
             d.status AS driverStatus,
             d.state AS driverState,
-            COALESCE(AVG(t.driver_ratings), 0) AS driverRating  -- Calculate average driver rating
+            COALESCE(AVG(t.driver_ratings), 0) AS driverRating 
         FROM vehicle v
         JOIN car_listing cl ON v.id = cl.class
         JOIN users u_cl ON cl.userId = u_cl.id
         JOIN driver d ON cl.userId = d.users_id
-        LEFT JOIN trip t ON d.id = t.driverId  -- Join with trip table
+        LEFT JOIN trip t ON d.id = t.driverId 
         WHERE d.state = 'online' AND d.status = 'approved'
         GROUP BY v.id, cl.id, u_cl.id, d.id;
     `;
-
-    pool.getConnection((err, connection) => {
-        if (err) {
-            console.error('Database Connection Error:', err);
-            return res.status(500).json({ message: 'Internal server error' });
-        }
-
-        connection.query(sql, (err, results) => {
-            connection.release(); // Release connection back to the pool
-
-            if (err) {
-                console.error('Error fetching car listings:', err);
-                return res.status(500).json({ message: 'Internal server error' });
-            }
-
-            res.json(results);
-        });
-    });
-});
+    
+    try {
+      const [rows] = await pool.execute(sql);  // Execute the query with promise-based connection
+  
+      res.json(rows);  // Send the response
+    } catch (err) {
+      console.error('Error fetching car listings:', err);
+      return res.status(500).json({ message: 'Internal server error' });
+    }
+  });
 
 // Endpoint to fetch trips for a specific driver
 router.get('/driverTrips/:driverId', (req, res) => {
