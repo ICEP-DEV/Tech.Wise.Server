@@ -7,15 +7,14 @@ const firestoreDb = require('../config/FirebaseConfig').db;
 router.post('/trips', async (req, res) => {
     console.log('Request Body:', req.body);
 
-    const tripData = req.body.tripData || req.body;
-
     const {
         customerId, driverId, requestDate, currentDate, pickUpLocation, dropOffLocation, statuses,
         customer_rating, customer_feedback, duration_minutes, vehicle_type, distance_traveled,
         cancellation_reason, cancel_by, pickupTime, dropOffTime, pickUpCoordinates, dropOffCoordinates, 
         payment_status
-    } = tripData;
+    } = req.body;
 
+    // Ensure required fields are present
     if (!customerId || !driverId || !pickUpCoordinates || !dropOffCoordinates) {
         return res.status(400).json({ error: "Required fields are missing" });
     }
@@ -27,46 +26,42 @@ router.post('/trips', async (req, res) => {
         return res.status(400).json({ error: "Pickup or drop-off coordinates are missing" });
     }
 
-    // Adjusted SQL query with matching placeholders
+    // SQL query for inserting trip data with `payment_status = 'pending'`
     const sql = `
     INSERT INTO trips (
         customerId, driverId, requestDate, currentDate, pickUpLocation, dropOffLocation, statuses,
-        customer_rating, customer_feedback, duration_minutes_pick_desti, vehicle_type, distance_traveled, 
+        customer_rating, customer_feedback, duration_minutes, vehicle_type, distance_traveled, 
         cancellation_reason, cancel_by, pickupTime, dropOffTime, pickUpLatitude, pickUpLongitude, 
-        dropOffLatitude, dropOffLongitude, payment_status, driver_ratings, driver_feedback, 
-        duration_minutes_driver_to_pickup
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        dropOffLatitude, dropOffLongitude, payment_status
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
-    let connection;
     try {
-        connection = await pool.getConnection();
-        console.log('Database connection established.');
+        // Get a connection from the pool
+        const connection = await pool.getConnection();
 
+        // Execute the query
         const [result] = await connection.execute(sql, [
             customerId, driverId, requestDate, currentDate, pickUpLocation, dropOffLocation, statuses,
             customer_rating, customer_feedback, duration_minutes, vehicle_type, distance_traveled, 
-            cancellation_reason, cancel_by, pickupTime, dropOffTime, pickUpLatitude, pickUpLongitude, 
-            dropOffLatitude, dropOffLongitude, payment_status, // Add these fields if you want them to be passed
-            null, null, // Placeholder for `driver_ratings` and `driver_feedback`
-            null // Placeholder for `duration_minutes_driver_to_pickup`
+            cancellation_reason, cancel_by, pickupTime, dropOffTime, 
+            pickUpLatitude, pickUpLongitude, // Insert latitudes and longitudes as DOUBLE values
+            dropOffLatitude, dropOffLongitude, 
+            payment_status
         ]);
 
-        const tripId = result.insertId;
+        connection.release(); // Release the connection back to the pool
+
+        const tripId = result.insertId; // Get the inserted trip ID
         console.log("Trip inserted into MySQL with ID:", tripId);
 
-        return res.status(201).json({ message: "Trip data saved successfully", tripId });
-
+        // Step 2: Respond back with success message and tripId
+        return res.status(200).json({ message: "Trip data saved successfully", tripId: tripId });
     } catch (err) {
-        console.error("Database Error:", err.message);
-        return res.status(500).json({ error: "Database error, please try again", details: err.message });
-    } finally {
-        if (connection) {
-            connection.release();  // Always release the connection, even in case of error
-        }
+        console.error("Error saving trip data:", err);
+        return res.status(500).json({ error: "An error occurred while saving trip data" });
     }
 });
-
 // Endpoint to fetch trips by user_id and status
 router.get('/tripHistory/:userId', (req, res) => {
     const userId = req.params.userId;
