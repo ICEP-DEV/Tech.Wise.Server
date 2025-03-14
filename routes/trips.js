@@ -90,7 +90,7 @@ router.post('/trips', async (req, res) => {
         connection.release(); // Release the connection back to the pool
 
         const tripId = result.insertId; // Get the inserted trip ID
-        console.log("Trip inserted into MySQL with ID:", tripId);
+        console.log("Trip inserteded into MySQL with ID:", tripId);
 
         // Step 2: Respond back with success message and tripId
         return res.status(200).json({ message: "Trip data saved successfully", tripId: tripId });
