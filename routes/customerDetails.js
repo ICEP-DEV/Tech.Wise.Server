@@ -45,7 +45,7 @@ const pool = require('../config/config'); // Import the MySQL connection pool
 
 router.get('/customer/:id', (req, res) => {
     const { id } = req.params;
-    console.log(`🚀 Fetching details for customer ID: ${id}`);
+    console.log(`🚀 Fetching details for customer ID: ${id}`);  // Confirm this is printed
 
     const query = "SELECT * FROM users WHERE id = ?";
 
@@ -55,22 +55,19 @@ router.get('/customer/:id', (req, res) => {
             return res.status(500).json({ error: "Database connection error" });
         }
 
-        connection.query(query, [id], (err, results) => {
-            connection.release(); // ✅ Always release connection after query execution
-
+        connection.query(query, [customerId], (err, results) => {
             if (err) {
                 console.error("❌ Error fetching user:", err);
                 return res.status(500).json({ error: "Internal Server Error" });
             }
-
             if (results.length === 0) {
-                console.log(`⚠️ No user found with ID: ${id}`);
+                console.log("⚠️ No results found");
                 return res.status(404).json({ message: "User not found" });
             }
-
-            console.log(`✅ User found: ${JSON.stringify(results[0])}`);
+            console.log("✅ User found:", results[0]);
             res.status(200).json(results[0]);
         });
+        
     });
 });
 
