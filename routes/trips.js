@@ -7,21 +7,28 @@ const firestoreDb = require('../config/FirebaseConfig').db;
 router.post('/trips', async (req, res) => {
     console.log('Request Body:', req.body);
 
+    // Check if tripData exists and extract data
+    const tripData = req.body.tripData || req.body;
+
     const {
         customerId, driverId, requestDate, currentDate, pickUpLocation, dropOffLocation, statuses,
         customer_rating, customer_feedback, duration_minutes, vehicle_type, distance_traveled,
         cancellation_reason, cancel_by, pickupTime, dropOffTime, pickUpCoordinates, dropOffCoordinates, 
         payment_status
-    } = req.body;
+    } = tripData;  // Extract from tripData
 
     // Ensure required fields are present
     if (!customerId || !driverId || !pickUpCoordinates || !dropOffCoordinates) {
         return res.status(400).json({ error: "Required fields are missing" });
     }
 
-    // Extract latitude and longitude from request body
-    const { latitude: pickUpLatitude, longitude: pickUpLongitude } = pickUpCoordinates;
-    const { latitude: dropOffLatitude, longitude: dropOffLongitude } = dropOffCoordinates;
+    // Extract latitude and longitude
+    const { latitude: pickUpLatitude, longitude: pickUpLongitude } = pickUpCoordinates || {};
+    const { latitude: dropOffLatitude, longitude: dropOffLongitude } = dropOffCoordinates || {};
+
+    if (!pickUpLatitude || !pickUpLongitude || !dropOffLatitude || !dropOffLongitude) {
+        return res.status(400).json({ error: "Pickup or drop-off coordinates are missing" });
+    }
 
     // SQL query for inserting trip data
     const sql = `
@@ -46,16 +53,17 @@ router.post('/trips', async (req, res) => {
             const tripId = result.insertId;
             console.log("Trip inserted into MySQL with ID:", tripId);
 
-            return res.status(200).json({ message: "Trip data saved successfully", tripId });
+            return res.status(201).json({ message: "Trip data saved successfully", tripId });
 
         } finally {
             connection.release(); // Always release the connection
         }
     } catch (err) {
-        console.error("Database Error:", err);
-        return res.status(500).json({ error: "Database error, please try again" });
+        console.error("Database Error:", err.message);
+        return res.status(500).json({ error: "Database error, please try again", details: err.message });
     }
 });
+
 // Endpoint to fetch trips by user_id and status
 router.get('/tripHistory/:userId', (req, res) => {
     const userId = req.params.userId;
