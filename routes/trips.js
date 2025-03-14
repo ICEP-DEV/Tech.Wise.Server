@@ -170,39 +170,35 @@ router.get('/api/car-listings', async (req, res) => {
 });
 
 // Endpoint to fetch trips for a specific driver
-router.get('/driverTrips/:driverId', (req, res) => {
-    const driverId = req.params.driverId;
+router.get('/driverTrips', async (req, res) => {
+    const { driverId } = req.query; // Use query parameters instead of route params
 
-    // SQL query to fetch pending trips from the trips table
-    const query = `
-        SELECT * FROM trips
-        WHERE driverId = ? AND status = 'pending'
+    console.log('Fetching trips for driverId:', driverId);
+
+    // Validate driverId
+    if (!driverId) {
+        return res.status(400).json({ message: 'Driver ID is required' });
+    }
+
+    const sql = `
+      SELECT * FROM trips 
+      WHERE driverId = ? AND status = 'pending'
     `;
 
-    pool.getConnection((err, connection) => {
-        if (err) {
-            console.error('Database Connection Error:', err);
-            return res.status(500).send('Error fetching trips');
+    try {
+        const startTime = Date.now(); // Log query start time
+        const [rows] = await pool.query(sql, [driverId]); 
+        console.log(`Query executed in ${Date.now() - startTime} ms`);
+
+        if (rows.length > 0) {
+            res.json({ trips: rows }); // Return trips as an array
+        } else {
+            res.status(404).json({ message: 'No pending trips found' });
         }
-
-        // Execute the query to fetch pending trips
-        connection.query(query, [driverId], (err, results) => {
-            connection.release();
-
-            if (err) {
-                console.error('Error with query execution:', err);
-                return res.status(500).send(`Error with database query: ${err.message}`);
-            }
-
-            // Check if no trips are found
-            if (results.length === 0) {
-                return res.status(404).send('No pending trips found');
-            }
-
-            // Send the list of pending trips as the response
-            res.json(results);
-        });
-    });
+    } catch (error) {
+        console.error('Error executing query:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
 });
 
   
