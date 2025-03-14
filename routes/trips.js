@@ -117,67 +117,58 @@ router.post('/trips/update-location', async (req, res) => {
 });
 
 // Car listing data
-router.get('/api/car-listings', (req, res) => {
-    const sql = `
-        SELECT 
-            v.id AS id,
-            v.name AS name,
-            v.image AS image,
-            v.costPerKm AS costPerKm,
-            v.status AS status,
-            v.description AS description,
-            cl.id AS carListingId,
-            cl.car_make AS carMake,
-            cl.car_model AS carModel,
-            cl.car_year AS carYear,
-            cl.number_of_seats AS numberOfSeats,
-            cl.car_colour AS carColour,
-            cl.car_image AS carImage,
-            cl.license_plate AS licensePlate,
-            cl.class AS class,
-            u_cl.id AS driverId,
-            u_cl.name AS driverName,
-            u_cl.email AS driverEmail,
-            u_cl.phoneNumber AS driverPhoneNumber,
-            u_cl.address AS driverAddress,
-            u_cl.lastName AS userLastName,
-            u_cl.current_address AS driverCurrentAddress,
-            d.id AS userId,
-            d.photo AS driverPhoto,
-            d.id_copy AS driverIdCopy,
-            d.gender AS driverGender,
-            d.police_clearance AS driverPoliceClearance,
-            d.pdp AS driverPdp,
-            d.status AS driverStatus,
-            d.state AS driverState,
-            COALESCE(AVG(t.driver_ratings), 0) AS driverRating  -- Calculate average driver rating
-        FROM vehicle v
-        JOIN car_listing cl ON v.id = cl.class
-        JOIN users u_cl ON cl.userId = u_cl.id
-        JOIN driver d ON cl.userId = d.users_id
-        LEFT JOIN trip t ON d.id = t.driverId  -- Join with trip table
-        WHERE d.state = 'online' AND d.status = 'approved'
-        GROUP BY v.id, cl.id, u_cl.id, d.id;
-    `;
+router.get('/api/car-listings', async (req, res) => {
+    try {
+        const sql = `
+            SELECT 
+                v.id AS id,
+                v.name AS name,
+                v.image AS image,
+                v.costPerKm AS costPerKm,
+                v.status AS status,
+                v.description AS description,
+                cl.id AS carListingId,
+                cl.car_make AS carMake,
+                cl.car_model AS carModel,
+                cl.car_year AS carYear,
+                cl.number_of_seats AS numberOfSeats,
+                cl.car_colour AS carColour,
+                cl.car_image AS carImage,
+                cl.license_plate AS licensePlate,
+                cl.class AS class,
+                u_cl.id AS driverId,
+                u_cl.name AS driverName,
+                u_cl.email AS driverEmail,
+                u_cl.phoneNumber AS driverPhoneNumber,
+                u_cl.address AS driverAddress,
+                u_cl.lastName AS userLastName,
+                u_cl.current_address AS driverCurrentAddress,
+                d.id AS userId,
+                d.photo AS driverPhoto,
+                d.id_copy AS driverIdCopy,
+                d.gender AS driverGender,
+                d.police_clearance AS driverPoliceClearance,
+                d.pdp AS driverPdp,
+                d.status AS driverStatus,
+                d.state AS driverState,
+                COALESCE(AVG(t.driver_ratings), 0) AS driverRating  
+            FROM vehicle v
+            JOIN car_listing cl ON v.id = cl.class
+            JOIN users u_cl ON cl.userId = u_cl.id
+            JOIN driver d ON cl.userId = d.users_id
+            LEFT JOIN trip t ON d.id = t.driverId  
+            WHERE d.state = 'online' AND d.status = 'approved'
+            GROUP BY v.id, cl.id, u_cl.id, d.id;
+        `;
 
-    pool.getConnection((err, connection) => {
-        if (err) {
-            console.error('Database Connection Error:', err);
-            return res.status(500).json({ message: 'Internal server error' });
-        }
-
-        connection.query(sql, (err, results) => {
-            connection.release(); // Release connection back to the pool
-
-            if (err) {
-                console.error('Error fetching car listings:', err);
-                return res.status(500).json({ message: 'Internal server error' });
-            }
-
-            res.json(results);
-        });
-    });
+        const [results] = await pool.query(sql);
+        res.json(results);
+    } catch (error) {
+        console.error('Error fetching car listings:', error);
+        res.status(500).json({ message: 'Internal server error', error: error.message });
+    }
 });
+
 // Endpoint to fetch trips for a specific driver
 router.get('/driverTrips/:driverId', (req, res) => {
     const driverId = req.params.driverId;
