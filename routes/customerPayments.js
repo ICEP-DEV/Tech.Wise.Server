@@ -25,15 +25,19 @@ router.get('/recipient', (req, res) => {
             console.error('Error connecting to the database:', err);
             return res.status(500).json({ message: 'Internal server error' });
         }
-
+    
+        const startTime = Date.now(); // Log start time
+    
         connection.query(sql, [user_id], (error, result) => {
+            const queryDuration = Date.now() - startTime; // Log query duration
+            console.log('Query executed in:', queryDuration, 'ms');
             connection.release(); // Release connection back to the pool
-
+    
             if (error) {
                 console.error('Error executing SQL query:', error);
                 return res.status(500).json({ message: 'Internal server error' });
             }
-
+    
             if (result.length > 0) {
                 res.json({ recipients: result }); // Return recipients as an array
             } else {
@@ -41,15 +45,18 @@ router.get('/recipient', (req, res) => {
             }
         });
     });
+    
 });
 
 // POST endpoint to insert payment data
 router.post('/payment', (req, res) => {
     const { tripId, paymentType, amount, paymentDate } = req.body;
 
-    // Ensure required fields are present
+    console.log('Request to process payment data:', req.body); // Log incoming request data
+
+    // Validate the required fields
     if (!tripId || !paymentType || !amount || !paymentDate) {
-        return res.status(400).json({ error: "Required fields are missing" });
+        return res.status(400).json({ message: 'Required fields are missing' });
     }
 
     // SQL query to insert payment data into the database
@@ -58,25 +65,29 @@ router.post('/payment', (req, res) => {
       VALUES (?, ?, ?, ?)
     `;
 
-    // Insert payment data into MySQL
     pool.getConnection((err, connection) => {
         if (err) {
             console.error('Error connecting to the database:', err);
-            return res.status(500).json({ error: "An error occurred while connecting to the database" });
+            return res.status(500).json({ message: 'Internal server error' });
         }
 
+        const startTime = Date.now(); // Log start time
+
         connection.query(sql, [tripId, paymentType, amount, paymentDate], (error, result) => {
+            const queryDuration = Date.now() - startTime; // Log query duration
+            console.log('Query executed in:', queryDuration, 'ms');
             connection.release(); // Release connection back to the pool
 
             if (error) {
-                console.error("Error saving payment data:", error);
-                return res.status(500).json({ error: "An error occurred while saving payment data" });
+                console.error('Error executing SQL query:', error);
+                return res.status(500).json({ message: 'Internal server error' });
             }
 
-            console.log("Payment data inserted successfully");
-            res.status(200).json({ message: "Payment data inserted successfully", paymentId: result.insertId });
+            console.log('Payment data inserted successfully');
+            res.status(200).json({ message: 'Payment data inserted successfully', paymentId: result.insertId });
         });
     });
 });
+
 
 module.exports = router;

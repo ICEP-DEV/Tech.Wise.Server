@@ -1,4 +1,4 @@
-const mysql = require('mysql');
+const mysql = require('mysql2/promise'); // Use mysql2 with promises
 
 // Create a connection pool
 const pool = mysql.createPool({
@@ -7,8 +7,12 @@ const pool = mysql.createPool({
   user: 'sql8766593',
   password: 'TZzNrUc4fB',
   database: 'sql8766593',
-  port: 3306
+  waitForConnections: true,  // Ensures the pool waits for a connection to be released before throwing an error
+  queueLimit: 0,            // No limit to the queue
+  port: 3306,
+  connectTimeout: 60000,     // Connection timeout in ms (60 seconds)
 });
+
 
 // Handle connection errors globally
 pool.on('error', (err) => {
