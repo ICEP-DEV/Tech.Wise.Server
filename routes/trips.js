@@ -7,7 +7,6 @@ const firestoreDb = require('../config/FirebaseConfig').db;
 router.post('/trips', async (req, res) => {
     console.log('Request Body:', req.body);
 
-    // Check if tripData exists and extract data
     const tripData = req.body.tripData || req.body;
 
     const {
@@ -15,14 +14,12 @@ router.post('/trips', async (req, res) => {
         customer_rating, customer_feedback, duration_minutes, vehicle_type, distance_traveled,
         cancellation_reason, cancel_by, pickupTime, dropOffTime, pickUpCoordinates, dropOffCoordinates, 
         payment_status
-    } = tripData;  // Extract from tripData
+    } = tripData;
 
-    // Ensure required fields are present
     if (!customerId || !driverId || !pickUpCoordinates || !dropOffCoordinates) {
         return res.status(400).json({ error: "Required fields are missing" });
     }
 
-    // Extract latitude and longitude
     const { latitude: pickUpLatitude, longitude: pickUpLongitude } = pickUpCoordinates || {};
     const { latitude: dropOffLatitude, longitude: dropOffLongitude } = dropOffCoordinates || {};
 
@@ -30,7 +27,7 @@ router.post('/trips', async (req, res) => {
         return res.status(400).json({ error: "Pickup or drop-off coordinates are missing" });
     }
 
-    // SQL query for inserting trip data
+    // Adjusted SQL query with matching placeholders
     const sql = `
     INSERT INTO trips (
         customerId, driverId, requestDate, currentDate, pickUpLocation, dropOffLocation, statuses,
@@ -43,7 +40,7 @@ router.post('/trips', async (req, res) => {
 
     let connection;
     try {
-        connection = await pool.getConnection();  // Get the connection from the pool
+        connection = await pool.getConnection();
         console.log('Database connection established.');
 
         const [result] = await connection.execute(sql, [
@@ -51,8 +48,8 @@ router.post('/trips', async (req, res) => {
             customer_rating, customer_feedback, duration_minutes, vehicle_type, distance_traveled, 
             cancellation_reason, cancel_by, pickupTime, dropOffTime, pickUpLatitude, pickUpLongitude, 
             dropOffLatitude, dropOffLongitude, payment_status, // Add these fields if you want them to be passed
-            null, null, // Placeholder for `driver_ratings` and `driver_feedback` if not provided
-            null // Placeholder for `duration_minutes_driver_to_pickup` if not provided
+            null, null, // Placeholder for `driver_ratings` and `driver_feedback`
+            null // Placeholder for `duration_minutes_driver_to_pickup`
         ]);
 
         const tripId = result.insertId;
