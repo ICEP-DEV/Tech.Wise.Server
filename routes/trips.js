@@ -257,7 +257,6 @@ router.put('/trips/:id/status', async (req, res) => {
     // Log incoming request data
     console.log(`Received update request for trip ID: ${id}`);
     console.log(`Status: ${status}, Cancellation Reason: ${cancellation_reason}, Cancelled By: ${cancel_by}`);
-
     // Prepare SQL query to update trip status and other details
     const sql = `
     UPDATE trips 
