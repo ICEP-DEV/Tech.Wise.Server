@@ -191,7 +191,7 @@ router.get('/driverTrips/:driverId', (req, res) => {
     // SQL query to fetch pending trips from the trips table
     const query = `
         SELECT * FROM trips
-        WHERE driverId = ? AND status = 'pending'
+        WHERE driverId = ? AND statuses = 'pending'
     `;
 
     pool.getConnection((err, connection) => {
