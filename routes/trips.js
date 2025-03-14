@@ -182,7 +182,7 @@ router.get('/driverTrips', async (req, res) => {
 
     const sql = `
       SELECT * FROM trips 
-      WHERE driverId = ? AND status = 'pending'
+      WHERE driverId = ? AND statuses = 'pending'
     `;
 
     try {
