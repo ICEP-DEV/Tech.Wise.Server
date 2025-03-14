@@ -25,15 +25,19 @@ router.get('/recipient', (req, res) => {
             console.error('Error connecting to the database:', err);
             return res.status(500).json({ message: 'Internal server error' });
         }
-
+    
+        const startTime = Date.now(); // Log start time
+    
         connection.query(sql, [user_id], (error, result) => {
+            const queryDuration = Date.now() - startTime; // Log query duration
+            console.log('Query executed in:', queryDuration, 'ms');
             connection.release(); // Release connection back to the pool
-
+    
             if (error) {
                 console.error('Error executing SQL query:', error);
                 return res.status(500).json({ message: 'Internal server error' });
             }
-
+    
             if (result.length > 0) {
                 res.json({ recipients: result }); // Return recipients as an array
             } else {
@@ -41,6 +45,7 @@ router.get('/recipient', (req, res) => {
             }
         });
     });
+    
 });
 
 // POST endpoint to insert payment data
