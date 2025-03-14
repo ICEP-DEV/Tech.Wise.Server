@@ -29,27 +29,27 @@ router.post('/trips', async (req, res) => {
         payment_status
     } = req.body.tripData;
 
-    // console.log('Extracted Data:', {
-    //     customerId,
-    //     driverId,
-    //     requestDate,
-    //     currentDate,
-    //     pickUpLocation,
-    //     dropOffLocation,
-    //     statuses,
-    //     customer_rating,
-    //     customer_feedback,
-    //     duration_minutes,
-    //     vehicle_type,
-    //     distance_traveled,
-    //     cancellation_reason,
-    //     cancel_by,
-    //     pickupTime,
-    //     dropOffTime,
-    //     pickUpCoordinates,
-    //     dropOffCoordinates,
-    //     payment_status
-    // });
+    console.log('Extracted Data:', {
+        customerId,
+        driverId,
+        requestDate,
+        currentDate,
+        pickUpLocation,
+        dropOffLocation,
+        statuses,
+        customer_rating,
+        customer_feedback,
+        duration_minutes,
+        vehicle_type,
+        distance_traveled,
+        cancellation_reason,
+        cancel_by,
+        pickupTime,
+        dropOffTime,
+        pickUpCoordinates,
+        dropOffCoordinates,
+        payment_status
+    });
 
     // Ensure required fields are present
     if (!customerId || !driverId || !pickUpCoordinates || !dropOffCoordinates) {
