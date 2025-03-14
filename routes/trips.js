@@ -20,10 +20,8 @@ router.post('/trips', async (req, res) => {
     }
 
     // Extract latitude and longitude from request body
-    const pickUpLatitude = pickUpCoordinates.latitude;
-    const pickUpLongitude = pickUpCoordinates.longitude;
-    const dropOffLatitude = dropOffCoordinates.latitude;
-    const dropOffLongitude = dropOffCoordinates.longitude;
+    const { latitude: pickUpLatitude, longitude: pickUpLongitude } = pickUpCoordinates;
+    const { latitude: dropOffLatitude, longitude: dropOffLongitude } = dropOffCoordinates;
 
     // SQL query for inserting trip data
     const sql = `
@@ -35,33 +33,29 @@ router.post('/trips', async (req, res) => {
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
-    pool.getConnection((err, connection) => {
-        if (err) {
-            console.error("Database Connection Error:", err);
-            return res.status(500).json({ error: "Database connection failed" });
-        }
+    try {
+        const connection = await pool.getConnection();
+        try {
+            const [result] = await connection.query(sql, [
+                customerId, driverId, requestDate, currentDate, pickUpLocation, dropOffLocation, statuses,
+                customer_rating, customer_feedback, duration_minutes, vehicle_type, distance_traveled, 
+                cancellation_reason, cancel_by, pickupTime, dropOffTime, pickUpLatitude, pickUpLongitude, 
+                dropOffLatitude, dropOffLongitude, payment_status
+            ]);
 
-        connection.query(sql, [
-            customerId, driverId, requestDate, currentDate, pickUpLocation, dropOffLocation, statuses,
-            customer_rating, customer_feedback, duration_minutes, vehicle_type, distance_traveled, 
-            cancellation_reason, cancel_by, pickupTime, dropOffTime, pickUpLatitude, pickUpLongitude, 
-            dropOffLatitude, dropOffLongitude, payment_status
-        ], (err, result) => {
-            connection.release(); // Release connection back to the pool
-
-            if (err) {
-                console.error("Error saving trip data:", err);
-                return res.status(500).json({ error: "An error occurred while saving trip data" });
-            }
-
-            const tripId = result.insertId; // Get the inserted trip ID
+            const tripId = result.insertId;
             console.log("Trip inserted into MySQL with ID:", tripId);
 
-            return res.status(200).json({ message: "Trip data saved successfully", tripId: tripId });
-        });
-    });
-});
+            return res.status(200).json({ message: "Trip data saved successfully", tripId });
 
+        } finally {
+            connection.release(); // Always release the connection
+        }
+    } catch (err) {
+        console.error("Database Error:", err);
+        return res.status(500).json({ error: "Database error, please try again" });
+    }
+});
 // Endpoint to fetch trips by user_id and status
 router.get('/tripHistory/:userId', (req, res) => {
     const userId = req.params.userId;
