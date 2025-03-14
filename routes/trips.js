@@ -200,15 +200,14 @@ router.get('/driverTrips/:driverId', (req, res) => {
             return res.status(500).send('Error fetching trips');
         }
 
-        connection.query(query, [driverId], (err, results) => {
-            connection.release(); // Release connection back to the pool
+        connection.query('SELECT 1', (err, results) => {
+            connection.release();
 
             if (err) {
-                console.error('Error fetching trips:', err);
-                return res.status(500).send('Error fetching trips');
+                console.error('Error with simple query:', err);
+                return res.status(500).send('Error with database query');
             }
-
-            res.json(results); // Return the fetched trips
+            res.send('Database connection works');
         });
     });
 });
