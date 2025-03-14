@@ -2,51 +2,40 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../config/config'); // Use the pool for database connection
 
+
 // Endpoint to fetch recipient data
-router.get('/recipient', (req, res) => {
-    const { user_id } = req.query; // Get user_id from the query string
-
-    console.log('Request to fetch recipient data:', req.query); // Log the incoming query parameters
-
-    // Validate the user_id
+router.get('/recipient', async (req, res) => {
+    const { user_id } = req.query;
+  
+    console.log('Fetching recipient for user_id:', user_id);
+  
     if (!user_id) {
-        return res.status(400).json({ message: 'User ID is required' });
+      return res.status(400).json({ message: 'User ID is required' });
     }
-
-    // SQL query to fetch recipient data based on user_id
+  
     const sql = `
-      SELECT id, paystack_recipient_id, bank_code, country_code, user_id, created_at, last_four_digits, is_selected
-      FROM recipients
-      WHERE user_id = ?;
+      SELECT 
+        id, paystack_recipient_id, bank_code, country_code, user_id, 
+        created_at, last_four_digits, is_selected 
+      FROM recipients 
+      WHERE user_id = ?
     `;
-
-    pool.getConnection((err, connection) => {
-        if (err) {
-            console.error('Error connecting to the database:', err);
-            return res.status(500).json({ message: 'Internal server error' });
-        }
-    
-        const startTime = Date.now(); // Log start time
-    
-        connection.query(sql, [user_id], (error, result) => {
-            const queryDuration = Date.now() - startTime; // Log query duration
-            console.log('Query executed in:', queryDuration, 'ms');
-            connection.release(); // Release connection back to the pool
-    
-            if (error) {
-                console.error('Error executing SQL query:', error);
-                return res.status(500).json({ message: 'Internal server error' });
-            }
-    
-            if (result.length > 0) {
-                res.json({ recipients: result }); // Return recipients as an array
-            } else {
-                return res.status(404).json({ message: 'No recipient found for this user' });
-            }
-        });
-    });
-    
-});
+  
+    try {
+      const startTime = Date.now();
+      const [rows] = await pool.query(sql, [user_id]);
+      console.log(`Query executed in ${Date.now() - startTime} ms`);
+  
+      if (rows.length > 0) {
+        res.json({ recipients: rows });
+      } else {
+        res.status(404).json({ message: 'No recipient found' });
+      }
+    } catch (error) {
+      console.error('Error executing query:', error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  });
 
 // POST endpoint to insert payment data
 router.post('/payment', (req, res) => {
