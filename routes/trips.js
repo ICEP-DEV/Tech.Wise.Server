@@ -3,58 +3,99 @@ const router = express.Router();
 const pool = require('../config/config'); // Use pool for database connection
 const firestoreDb = require('../config/FirebaseConfig').db;
 
-// POST endpoint to insert a new trip (based on the /recipient endpoint structure)
+// POST endpoint to create a new trip
 router.post('/trips', async (req, res) => {
-    console.log('Request Body:', req.body); // Log the incoming request body
+    console.log('Request Body:', req.body);
 
     const {
-        customerId, driverId, requestDate, currentDate, pickUpLocation, dropOffLocation, statuses,
-        rating, feedback, duration_minutes, vehicle_type, distance_traveled, cancellation_reason,
-        cancel_by, pickupTime, dropOffTime, pickUpCoordinates, dropOffCoordinates
-    } = req.body;
+        customerId,
+        driverId,
+        requestDate,
+        currentDate,
+        pickUpLocation,
+        dropOffLocation,
+        statuses,
+        customer_rating,
+        customer_feedback,
+        duration_minutes,
+        vehicle_type,
+        distance_traveled,
+        cancellation_reason,
+        cancel_by,
+        pickupTime,
+        dropOffTime,
+        pickUpCoordinates,
+        dropOffCoordinates,
+        payment_status
+    } = req.body.tripData;
 
-    // Check for required fields
-    if (!customerId || !driverId || !requestDate || !currentDate || !pickUpLocation || !dropOffLocation || !vehicle_type || !distance_traveled) {
+    console.log('Extracted Data:', {
+        customerId,
+        driverId,
+        requestDate,
+        currentDate,
+        pickUpLocation,
+        dropOffLocation,
+        statuses,
+        customer_rating,
+        customer_feedback,
+        duration_minutes,
+        vehicle_type,
+        distance_traveled,
+        cancellation_reason,
+        cancel_by,
+        pickupTime,
+        dropOffTime,
+        pickUpCoordinates,
+        dropOffCoordinates,
+        payment_status
+    });
+
+    // Ensure required fields are present
+    if (!customerId || !driverId || !pickUpCoordinates || !dropOffCoordinates) {
         return res.status(400).json({ error: "Required fields are missing" });
     }
 
-    // Prepare SQL query to insert trip data into MySQL
+    const { latitude: pickUpLatitude, longitude: pickUpLongitude } = pickUpCoordinates || {};
+    const { latitude: dropOffLatitude, longitude: dropOffLongitude } = dropOffCoordinates || {};
+
+    if (!pickUpLatitude || !pickUpLongitude || !dropOffLatitude || !dropOffLongitude) {
+        return res.status(400).json({ error: "Pickup or drop-off coordinates are missing" });
+    }
+
+    // SQL query for inserting trip data with payment_status = 'pending'
     const sql = `
-        INSERT INTO trip (
+        INSERT INTO trips (
             customerId, driverId, requestDate, currentDate, pickUpLocation, dropOffLocation, statuses,
-            customer_rating, customer_feedback, duration_minutes, vehicle_type, distance_traveled, cancellation_reason,
-            cancel_by, pickupTime, dropOffTime, pickUpLatitude, pickUpLongitude, dropOffLatitude, dropOffLongitude
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            customer_rating, customer_feedback, duration_minutes, vehicle_type, distance_traveled, 
+            cancellation_reason, cancel_by, pickupTime, dropOffTime, pickUpLatitude, pickUpLongitude, 
+            dropOffLatitude, dropOffLongitude, payment_status
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
-    // Coordinates as DOUBLE values for MySQL
-    const pickUpLatitude = pickUpCoordinates.latitude;
-    const pickUpLongitude = pickUpCoordinates.longitude;
-    const dropOffLatitude = dropOffCoordinates.latitude;
-    const dropOffLongitude = dropOffCoordinates.longitude;
-
     try {
-        const startTime = Date.now(); // Log start time
-        const [result] = await pool.query(sql, [
+        // Get a connection from the pool
+        const connection = await pool.getConnection();
+
+        // Execute the query
+        const [result] = await connection.execute(sql, [
             customerId, driverId, requestDate, currentDate, pickUpLocation, dropOffLocation, statuses,
-            rating, feedback, duration_minutes, vehicle_type, distance_traveled, cancellation_reason,
-            cancel_by, pickupTime, dropOffTime, pickUpLatitude, pickUpLongitude, dropOffLatitude, dropOffLongitude
+            customer_rating, customer_feedback, duration_minutes, vehicle_type, distance_traveled, 
+            cancellation_reason, cancel_by, pickupTime, dropOffTime, 
+            pickUpLatitude, pickUpLongitude, // Insert latitudes and longitudes as DOUBLE values
+            dropOffLatitude, dropOffLongitude, 
+            payment_status
         ]);
-        console.log(`Query executed in ${Date.now() - startTime} ms`);
+
+        connection.release(); // Release the connection back to the pool
 
         const tripId = result.insertId; // Get the inserted trip ID
-        if (!tripId) {
-            console.error("Trip ID not generated after insertion");
-            return res.status(500).json({ error: "Failed to generate trip ID after insertion" });
-        }
+        console.log("Trip inserted into MySQL with ID:", tripId);
 
-        // Emit an event to notify drivers/customers
-        const io = req.app.get('io');
-        io.emit('newTrip', { tripId, customerId, driverId, pickUpLocation, dropOffLocation });
-
+        // Step 2: Respond back with success message and tripId
         return res.status(200).json({ message: "Trip data saved successfully", tripId: tripId });
-    } catch (error) {
-        console.error("Error saving trip data:", error);
+    } catch (err) {
+        console.error("Error saving trip data:", err);
         return res.status(500).json({ error: "An error occurred while saving trip data" });
     }
 });
