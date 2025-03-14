@@ -36,8 +36,9 @@ router.post('/trips', async (req, res) => {
         customerId, driverId, requestDate, currentDate, pickUpLocation, dropOffLocation, statuses,
         customer_rating, customer_feedback, duration_minutes_pick_desti, vehicle_type, distance_traveled, 
         cancellation_reason, cancel_by, pickupTime, dropOffTime, pickUpLatitude, pickUpLongitude, 
-        dropOffLatitude, dropOffLongitude, payment_status
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        dropOffLatitude, dropOffLongitude, payment_status, driver_ratings, driver_feedback, 
+        duration_minutes_driver_to_pickup
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
     try {
@@ -47,7 +48,9 @@ router.post('/trips', async (req, res) => {
                 customerId, driverId, requestDate, currentDate, pickUpLocation, dropOffLocation, statuses,
                 customer_rating, customer_feedback, duration_minutes, vehicle_type, distance_traveled, 
                 cancellation_reason, cancel_by, pickupTime, dropOffTime, pickUpLatitude, pickUpLongitude, 
-                dropOffLatitude, dropOffLongitude, payment_status
+                dropOffLatitude, dropOffLongitude, payment_status, // Add these fields if you want them to be passed
+                null, null, // Placeholder for `driver_ratings` and `driver_feedback` if not provided
+                null // Placeholder for `duration_minutes_driver_to_pickup` if not provided
             ]);
 
             const tripId = result.insertId;
