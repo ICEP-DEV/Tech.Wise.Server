@@ -44,8 +44,9 @@ router.post('/trips', async (req, res) => {
     let connection;
     try {
         connection = await pool.getConnection();  // Get the connection from the pool
+        console.log('Database connection established.');
 
-        const [result] = await connection.query(sql, [
+        const [result] = await connection.execute(sql, [
             customerId, driverId, requestDate, currentDate, pickUpLocation, dropOffLocation, statuses,
             customer_rating, customer_feedback, duration_minutes, vehicle_type, distance_traveled, 
             cancellation_reason, cancel_by, pickupTime, dropOffTime, pickUpLatitude, pickUpLongitude, 
@@ -223,6 +224,42 @@ router.get('/driverTrips/:driverId', (req, res) => {
             res.json(results);
         });
     });
+});
+
+// Update trip status when a driver accepts or declines
+router.put('/trips/:id/status', (req, res) => {
+  const { id } = req.params;
+  const { status, cancellation_reason, cancel_by } = req.body;
+
+  // Ensure only valid statuses are accepted
+  const validStatuses = ['pending', 'completed', 'cancelled', 'accepted'];
+  if (!validStatuses.includes(status)) {
+    return res.status(400).json({ error: "Invalid status value" });
+  }
+
+  // Prepare SQL query to update trip status and other details
+  const sql = `
+    UPDATE trips
+    SET statuses = ?, cancellation_reason = ?, cancel_by = ?
+    WHERE id = ?
+  `;
+
+  // Use the pool to get a connection and execute the query
+  pool.execute(sql, [status, cancellation_reason, cancel_by, id], (err, result) => {
+    if (err) {
+      console.error("Error updating trip status:", err);
+      return res.status(500).json({ error: "Error updating trip status" });
+    }
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: "Trip not found" });
+    }
+
+    // Emit event to notify users about the status change
+    const io = req.app.get('io');
+    io.emit('tripStatusUpdated', { tripId: id, status });
+
+    res.status(200).json({ message: `Trip status updated to ${status}`, tripId: id });
+  });
 });
 
 module.exports = router;

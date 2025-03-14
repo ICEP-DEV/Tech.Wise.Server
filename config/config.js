@@ -1,4 +1,4 @@
-const mysql = require('mysql');
+const mysql = require('mysql2/promise'); // Use mysql2 with promises
 
 // Create a connection pool
 const pool = mysql.createPool({
