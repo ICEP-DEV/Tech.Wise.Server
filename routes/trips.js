@@ -3,8 +3,8 @@ const router = express.Router();
 const pool = require('../config/config'); // Use pool for database connection
 const firestoreDb = require('../config/FirebaseConfig').db;
 
-// POST endpoint to create a new trip
-router.post('/trips', (req, res) => {
+// POST endpoint to insert a new trip (based on the /recipient endpoint structure)
+router.post('/trips', async (req, res) => {
     console.log('Request Body:', req.body); // Log the incoming request body
 
     const {
@@ -33,18 +33,15 @@ router.post('/trips', (req, res) => {
     const dropOffLatitude = dropOffCoordinates.latitude;
     const dropOffLongitude = dropOffCoordinates.longitude;
 
-    // Execute the SQL query to insert into MySQL
-    db.query(sql, [
-        customerId, driverId, requestDate, currentDate, pickUpLocation, dropOffLocation, statuses,
-        rating, feedback, duration_minutes, vehicle_type, distance_traveled, cancellation_reason,
-        cancel_by, pickupTime, dropOffTime, pickUpLatitude, pickUpLongitude, dropOffLatitude, dropOffLongitude
-    ], (err, result) => {
+    try {
+        const startTime = Date.now(); // Log start time
+        const [result] = await pool.query(sql, [
+            customerId, driverId, requestDate, currentDate, pickUpLocation, dropOffLocation, statuses,
+            rating, feedback, duration_minutes, vehicle_type, distance_traveled, cancellation_reason,
+            cancel_by, pickupTime, dropOffTime, pickUpLatitude, pickUpLongitude, dropOffLatitude, dropOffLongitude
+        ]);
+        console.log(`Query executed in ${Date.now() - startTime} ms`);
 
-        if (err) {
-            console.error("Error saving trip data:", err);
-            return res.status(500).json({ error: "An error occurred while saving trip data" });
-        }
-        
         const tripId = result.insertId; // Get the inserted trip ID
         if (!tripId) {
             console.error("Trip ID not generated after insertion");
@@ -56,7 +53,10 @@ router.post('/trips', (req, res) => {
         io.emit('newTrip', { tripId, customerId, driverId, pickUpLocation, dropOffLocation });
 
         return res.status(200).json({ message: "Trip data saved successfully", tripId: tripId });
-    });
+    } catch (error) {
+        console.error("Error saving trip data:", error);
+        return res.status(500).json({ error: "An error occurred while saving trip data" });
+    }
 });
 
 // Endpoint to fetch trips by user_id and status
