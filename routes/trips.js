@@ -8,16 +8,20 @@ router.post('/trips', async (req, res) => {
     console.log('Request Body:', req.body);
 
     const {
+        tripData,
+        carData,
+        user_id,
+        driverStatus,
+        paymentType,
+        amount
+    } = req.body;
+
+    const {
         customerId, driverId, requestDate, currentDate, pickUpLocation, dropOffLocation, statuses,
         customer_rating, customer_feedback, duration_minutes, vehicle_type, distance_traveled,
         cancellation_reason, cancel_by, pickupTime, dropOffTime, pickUpCoordinates, dropOffCoordinates, 
         payment_status
-    } = req.body;
-
-    // Ensure required fields are present
-    if (!customerId || !driverId || !pickUpCoordinates || !dropOffCoordinates) {
-        return res.status(400).json({ error: "Required fields are missing" });
-    }
+    } = tripData;
 
     const { latitude: pickUpLatitude, longitude: pickUpLongitude } = pickUpCoordinates || {};
     const { latitude: dropOffLatitude, longitude: dropOffLongitude } = dropOffCoordinates || {};
@@ -32,8 +36,8 @@ router.post('/trips', async (req, res) => {
         customerId, driverId, requestDate, currentDate, pickUpLocation, dropOffLocation, statuses,
         customer_rating, customer_feedback, duration_minutes, vehicle_type, distance_traveled, 
         cancellation_reason, cancel_by, pickupTime, dropOffTime, pickUpLatitude, pickUpLongitude, 
-        dropOffLatitude, dropOffLongitude, payment_status
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        dropOffLatitude, dropOffLongitude, payment_status, carMake, carModel, carYear, carColour, carImage
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
     try {
@@ -47,7 +51,12 @@ router.post('/trips', async (req, res) => {
             cancellation_reason, cancel_by, pickupTime, dropOffTime, 
             pickUpLatitude, pickUpLongitude, // Insert latitudes and longitudes as DOUBLE values
             dropOffLatitude, dropOffLongitude, 
-            payment_status
+            payment_status,
+            carData.carMake,
+            carData.carModel,
+            carData.carYear,
+            carData.carColour,
+            carData.carImage // You may need to adjust based on the actual image path or how you're storing it
         ]);
 
         connection.release(); // Release the connection back to the pool
@@ -62,6 +71,7 @@ router.post('/trips', async (req, res) => {
         return res.status(500).json({ error: "An error occurred while saving trip data" });
     }
 });
+
 // Endpoint to fetch trips by user_id and status
 router.get('/tripHistory/:userId', (req, res) => {
     const userId = req.params.userId;
