@@ -247,39 +247,42 @@ router.get('/driverTrips', async (req, res) => {
 
 
 // Update trip status when a driver accepts or declines
-router.put('/trips/:id/status', (req, res) => {
+router.put('/trips/:id/status', async (req, res) => {
     const { id } = req.params;
     const { status, cancellation_reason, cancel_by } = req.body;
-  
+
     // Ensure only valid statuses are accepted
     const validStatuses = ['pending', 'completed', 'cancelled', 'accepted'];
     if (!validStatuses.includes(status)) {
-      return res.status(400).json({ error: "Invalid status value" });
+        return res.status(400).json({ error: "Invalid status value" });
     }
-  
+
     // Prepare SQL query to update trip status and other details
     const sql = `
       UPDATE trips 
       SET statuses = ?, cancellation_reason = ?, cancel_by = ? 
       WHERE id = ?
     `;
-  
-    db.query(sql, [status, cancellation_reason, cancel_by, id], (err, result) => {
-      if (err) {
-        console.error("Error updating trip status:", err);
-        return res.status(500).json({ error: "Error updating trip status" });
-      }
-      if (result.affectedRows === 0) {
-        return res.status(404).json({ error: "Trip not found" });
-      }
-  
-      // Emit event to notify users about the status change
-      const io = req.app.get('io');
-      io.emit('tripStatusUpdated', { tripId: id, status });
-  
-      res.status(200).json({ message: `Trip status updated to ${status}`, tripId: id });
-    });
-  });
+
+    try {
+        const startTime = Date.now(); // Log query start time
+        const [result] = await pool.query(sql, [status, cancellation_reason, cancel_by, id]);
+        console.log(`Query executed in ${Date.now() - startTime} ms`);
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ error: "Trip not found" });
+        }
+
+        // Emit event to notify users about the status change
+        const io = req.app.get('io');
+        io.emit('tripStatusUpdated', { tripId: id, status });
+
+        res.status(200).json({ message: `Trip status updated to ${status}`, tripId: id });
+    } catch (error) {
+        console.error("Error updating trip status:", error);
+        res.status(500).json({ error: "Error updating trip status" });
+    }
+});
   
 
 module.exports = router;
