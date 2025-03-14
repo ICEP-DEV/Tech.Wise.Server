@@ -257,6 +257,10 @@ router.put('/trips/:id/status', async (req, res) => {
         return res.status(400).json({ error: "Invalid status value" });
     }
 
+    // Log incoming request data
+    console.log(`Received update request for trip ID: ${id}`);
+    console.log(`Status: ${status}, Cancellation Reason: ${cancellation_reason}, Cancelled By: ${cancel_by}`);
+
     // Prepare SQL query to update trip status and other details
     const sql = `
       UPDATE trips 
@@ -268,6 +272,9 @@ router.put('/trips/:id/status', async (req, res) => {
         const startTime = Date.now(); // Log query start time
         const [result] = await pool.query(sql, [status, cancellation_reason, cancel_by, id]);
         console.log(`Query executed in ${Date.now() - startTime} ms`);
+
+        // Check the result of the update query
+        console.log('Update result:', result);
 
         if (result.affectedRows === 0) {
             return res.status(404).json({ error: "Trip not found" });
@@ -283,6 +290,6 @@ router.put('/trips/:id/status', async (req, res) => {
         res.status(500).json({ error: "Error updating trip status" });
     }
 });
-  
+
 
 module.exports = router;
