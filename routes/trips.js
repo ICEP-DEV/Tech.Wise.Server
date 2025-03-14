@@ -250,7 +250,6 @@ router.get('/driverTrips/:driverId', (req, res) => {
 router.get('/driverTrips/:driverId', (req, res) => {
     const driverId = req.params.driverId;
 
-<<<<<<< HEAD
     // SQL query to fetch pending trips from the trips table
     const query = `
         SELECT * FROM trips
@@ -319,7 +318,6 @@ router.put('/trips/:id/status', (req, res) => {
     });
   });
   
-=======
 // Update trip status when a driver accepts or declines
 router.put('/trips/:id/status', (req, res) => {
   const { id } = req.params;
@@ -356,5 +354,4 @@ router.put('/trips/:id/status', (req, res) => {
   });
 });
 
->>>>>>> 165896dfeb1fa806ed8775840b2271fdb30d84e1
 module.exports = router;
