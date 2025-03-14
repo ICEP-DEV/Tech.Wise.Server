@@ -11,6 +11,7 @@ router.post('/login', async (req, res) => {
     if (!email || !password) {
         return res.status(400).json({ message: "Email and password are required" });
     }
+    
 
     const sql = "SELECT id, role, name, email FROM users WHERE email = ? AND password = ?";
 
