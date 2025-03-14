@@ -6,6 +6,7 @@ const register = require('./routes/register');
 const driverDocumentsRoute = require("./routes/getDriverDocuments");
 const carListing = require("./routes/carListing");
 const Login = require('./routes/Login');
+const customerDetails = require('./routes/customerDetails');
 const customerPayments = require('./routes/customerPayments');
 const cors = require('cors');
 const path = require('path');
@@ -40,6 +41,8 @@ app.use("/api", driverDocumentsRoute);
 app.use("/api", carListing);
 app.use("/api", Login);
 app.use("/api", customerPayments);
+app.use("/api", customerDetails);
+
 
 // Global error handler
 app.use((err, req, res, next) => {
