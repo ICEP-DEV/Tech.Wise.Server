@@ -6,70 +6,98 @@ const firestoreDb = require('../config/FirebaseConfig').db;
 // POST endpoint to create a new trip
 router.post('/trips', async (req, res) => {
     console.log('Request Body:', req.body);
-    const safeData = {
-        customerId: customerId || null,
-        driverId: driverId || null,
-        requestDate: requestDate || null,
-        currentDate: currentDate || null,
-        pickUpLocation: pickUpLocation || null,
-        dropOffLocation: dropOffLocation || null,
-        statuses: statuses || null,
-        customer_rating: customer_rating || null,
-        customer_feedback: customer_feedback || null,
-        duration_minutes: duration_minutes || null,
-        vehicle_type: vehicle_type || null,
-        distance_traveled: distance_traveled || null,
-        cancellation_reason: cancellation_reason || null,
-        cancel_by: cancel_by || null,
-        pickupTime: pickupTime || null,
-        dropOffTime: dropOffTime || null,
-        pickUpLatitude: pickUpLatitude || null,
-        pickUpLongitude: pickUpLongitude || null,
-        dropOffLatitude: dropOffLatitude || null,
-        dropOffLongitude: dropOffLongitude || null,
-        payment_status: payment_status || 'pending',  // Default to 'pending'
-        carMake: carData?.carMake || null,
-        carModel: carData?.carModel || null,
-        carYear: carData?.carYear || null,
-        carColour: carData?.carColour || null,
-        carImage: carData?.carImage || null
-    };
-    
-    // Ensure the safeData object contains exactly 26 values.
-    const values = [
-        safeData.customerId, safeData.driverId, safeData.requestDate, safeData.currentDate, safeData.pickUpLocation, 
-        safeData.dropOffLocation, safeData.statuses, safeData.customer_rating, safeData.customer_feedback, 
-        safeData.duration_minutes, safeData.vehicle_type, safeData.distance_traveled, safeData.cancellation_reason, 
-        safeData.cancel_by, safeData.pickupTime, safeData.dropOffTime, safeData.pickUpLatitude, 
-        safeData.pickUpLongitude, safeData.dropOffLatitude, safeData.dropOffLongitude, safeData.payment_status, 
-        safeData.carMake, safeData.carModel, safeData.carYear, safeData.carColour, safeData.carImage
-    ];
-    
-    // SQL query
+
+    const {
+        customerId,
+        driverId,
+        requestDate,
+        currentDate,
+        pickUpLocation,
+        dropOffLocation,
+        statuses,
+        customer_rating,
+        customer_feedback,
+        duration_minutes,
+        vehicle_type,
+        distance_traveled,
+        cancellation_reason,
+        cancel_by,
+        pickupTime,
+        dropOffTime,
+        pickUpCoordinates,
+        dropOffCoordinates,
+        payment_status
+    } = req.body.tripData;
+
+    // console.log('Extracted Data:', {
+    //     customerId,
+    //     driverId,
+    //     requestDate,
+    //     currentDate,
+    //     pickUpLocation,
+    //     dropOffLocation,
+    //     statuses,
+    //     customer_rating,
+    //     customer_feedback,
+    //     duration_minutes,
+    //     vehicle_type,
+    //     distance_traveled,
+    //     cancellation_reason,
+    //     cancel_by,
+    //     pickupTime,
+    //     dropOffTime,
+    //     pickUpCoordinates,
+    //     dropOffCoordinates,
+    //     payment_status
+    // });
+
+    // Ensure required fields are present
+    if (!customerId || !driverId || !pickUpCoordinates || !dropOffCoordinates) {
+        return res.status(400).json({ error: "Required fields are missing" });
+    }
+
+    const { latitude: pickUpLatitude, longitude: pickUpLongitude } = pickUpCoordinates || {};
+    const { latitude: dropOffLatitude, longitude: dropOffLongitude } = dropOffCoordinates || {};
+
+    if (!pickUpLatitude || !pickUpLongitude || !dropOffLatitude || !dropOffLongitude) {
+        return res.status(400).json({ error: "Pickup or drop-off coordinates are missing" });
+    }
+
+    // SQL query for inserting trip data with `payment_status = 'pending'`
     const sql = `
     INSERT INTO trips (
         customerId, driverId, requestDate, currentDate, pickUpLocation, dropOffLocation, statuses,
         customer_rating, customer_feedback, duration_minutes, vehicle_type, distance_traveled, 
         cancellation_reason, cancel_by, pickupTime, dropOffTime, pickUpLatitude, pickUpLongitude, 
-        dropOffLatitude, dropOffLongitude, payment_status, carMake, carModel, carYear, carColour, carImage
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        dropOffLatitude, dropOffLongitude, payment_status
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
-    
+
     try {
+        // Get a connection from the pool
         const connection = await pool.getConnection();
-    
-        const [result] = await connection.execute(sql, values); // Use the 'values' array here
-        connection.release();
-    
-        const tripId = result.insertId;
+
+        // Execute the query
+        const [result] = await connection.execute(sql, [
+            customerId, driverId, requestDate, currentDate, pickUpLocation, dropOffLocation, statuses,
+            customer_rating, customer_feedback, duration_minutes, vehicle_type, distance_traveled, 
+            cancellation_reason, cancel_by, pickupTime, dropOffTime, 
+            pickUpLatitude, pickUpLongitude, // Insert latitudes and longitudes as DOUBLE values
+            dropOffLatitude, dropOffLongitude, 
+            payment_status
+        ]);
+
+        connection.release(); // Release the connection back to the pool
+
+        const tripId = result.insertId; // Get the inserted trip ID
         console.log("Trip inserted into MySQL with ID:", tripId);
-    
+
+        // Step 2: Respond back with success message and tripId
         return res.status(200).json({ message: "Trip data saved successfully", tripId: tripId });
     } catch (err) {
         console.error("Error saving trip data:", err);
         return res.status(500).json({ error: "An error occurred while saving trip data" });
     }
-    
 });
 
 // Endpoint to fetch trips by user_id and status
