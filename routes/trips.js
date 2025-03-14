@@ -176,4 +176,33 @@ router.get('/api/car-listings', (req, res) => {
     });
 });
 
+// Endpoint to fetch trips for a specific driver
+router.get('/driverTrips/:driverId', (req, res) => {
+    const driverId = req.params.driverId;
+
+    // SQL query to fetch pending trips from the trips table
+    const query = `
+        SELECT * FROM trips
+        WHERE driverId = ? AND status = 'pending'
+    `;
+
+    pool.getConnection((err, connection) => {
+        if (err) {
+            console.error('Database Connection Error:', err);
+            return res.status(500).send('Error fetching trips');
+        }
+
+        connection.query(query, [driverId], (err, results) => {
+            connection.release(); // Release connection back to the pool
+
+            if (err) {
+                console.error('Error fetching trips:', err);
+                return res.status(500).send('Error fetching trips');
+            }
+
+            res.json(results); // Return the fetched trips
+        });
+    });
+});
+
 module.exports = router;
