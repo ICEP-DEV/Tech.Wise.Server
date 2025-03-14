@@ -186,27 +186,26 @@ router.get('/driverTrips/:driverId', (req, res) => {
     const query = `
         SELECT * FROM trips
         WHERE driverId = ? AND status = 'pending'
-        LIMIT 10; -- Optionally limit the number of trips for performance
     `;
 
     pool.getConnection((err, connection) => {
         if (err) {
             console.error('Database Connection Error:', err);
-            return res.status(500).send({ message: 'Error fetching trips' });
+            return res.status(500).send('Error fetching trips');
         }
 
-        // Set a timeout for the query to avoid hanging
-        connection.query({ sql: query, timeout: 10000 }, [driverId], (err, results) => {
+        // Execute the query to fetch pending trips
+        connection.query(query, [driverId], (err, results) => {
             connection.release();
 
             if (err) {
-                console.error('Error with query:', err);
-                return res.status(500).send({ message: 'Error with database query', error: err });
+                console.error('Error with query execution:', err);
+                return res.status(500).send(`Error with database query: ${err.message}`);
             }
 
             // Check if no trips are found
             if (results.length === 0) {
-                return res.status(404).send({ message: 'No pending trips found' });
+                return res.status(404).send('No pending trips found');
             }
 
             // Send the list of pending trips as the response
@@ -214,6 +213,8 @@ router.get('/driverTrips/:driverId', (req, res) => {
         });
     });
 });
+
+  
 
 
 
