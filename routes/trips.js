@@ -6,27 +6,6 @@ const firestoreDb = require('../config/FirebaseConfig').db;
 // POST endpoint to create a new trip
 router.post('/trips', async (req, res) => {
     console.log('Request Body:', req.body);
-
-    const {
-        tripData,
-        carData,
-        user_id,
-        driverStatus,
-        paymentType,
-        amount
-    } = req.body;
-
-    const {
-        customerId, driverId, requestDate, currentDate, pickUpLocation, dropOffLocation, statuses,
-        customer_rating, customer_feedback, duration_minutes, vehicle_type, distance_traveled,
-        cancellation_reason, cancel_by, pickupTime, dropOffTime, pickUpCoordinates, dropOffCoordinates, 
-        payment_status
-    } = tripData;
-
-    const { latitude: pickUpLatitude, longitude: pickUpLongitude } = pickUpCoordinates || {};
-    const { latitude: dropOffLatitude, longitude: dropOffLongitude } = dropOffCoordinates || {};
-
-    // Replace undefined values with null
     const safeData = {
         customerId: customerId || null,
         driverId: driverId || null,
@@ -55,8 +34,18 @@ router.post('/trips', async (req, res) => {
         carColour: carData?.carColour || null,
         carImage: carData?.carImage || null
     };
-
-    // SQL query for inserting trip data with `payment_status = 'pending'`
+    
+    // Ensure the safeData object contains exactly 26 values.
+    const values = [
+        safeData.customerId, safeData.driverId, safeData.requestDate, safeData.currentDate, safeData.pickUpLocation, 
+        safeData.dropOffLocation, safeData.statuses, safeData.customer_rating, safeData.customer_feedback, 
+        safeData.duration_minutes, safeData.vehicle_type, safeData.distance_traveled, safeData.cancellation_reason, 
+        safeData.cancel_by, safeData.pickupTime, safeData.dropOffTime, safeData.pickUpLatitude, 
+        safeData.pickUpLongitude, safeData.dropOffLatitude, safeData.dropOffLongitude, safeData.payment_status, 
+        safeData.carMake, safeData.carModel, safeData.carYear, safeData.carColour, safeData.carImage
+    ];
+    
+    // SQL query
     const sql = `
     INSERT INTO trips (
         customerId, driverId, requestDate, currentDate, pickUpLocation, dropOffLocation, statuses,
@@ -65,32 +54,22 @@ router.post('/trips', async (req, res) => {
         dropOffLatitude, dropOffLongitude, payment_status, carMake, carModel, carYear, carColour, carImage
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
-
+    
     try {
-        // Get a connection from the pool
         const connection = await pool.getConnection();
-
-        // Execute the query with safe data
-        const [result] = await connection.execute(sql, [
-            safeData.customerId, safeData.driverId, safeData.requestDate, safeData.currentDate, safeData.pickUpLocation, 
-            safeData.dropOffLocation, safeData.statuses, safeData.customer_rating, safeData.customer_feedback, 
-            safeData.duration_minutes, safeData.vehicle_type, safeData.distance_traveled, safeData.cancellation_reason, 
-            safeData.cancel_by, safeData.pickupTime, safeData.dropOffTime, safeData.pickUpLatitude, 
-            safeData.pickUpLongitude, safeData.dropOffLatitude, safeData.dropOffLongitude, safeData.payment_status, 
-            safeData.carMake, safeData.carModel, safeData.carYear, safeData.carColour, safeData.carImage
-        ]);
-
-        connection.release(); // Release the connection back to the pool
-
-        const tripId = result.insertId; // Get the inserted trip ID
+    
+        const [result] = await connection.execute(sql, values); // Use the 'values' array here
+        connection.release();
+    
+        const tripId = result.insertId;
         console.log("Trip inserted into MySQL with ID:", tripId);
-
-        // Respond back with success message and tripId
+    
         return res.status(200).json({ message: "Trip data saved successfully", tripId: tripId });
     } catch (err) {
         console.error("Error saving trip data:", err);
         return res.status(500).json({ error: "An error occurred while saving trip data" });
     }
+    
 });
 
 // Endpoint to fetch trips by user_id and status
