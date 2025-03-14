@@ -38,7 +38,7 @@ router.get('/recipient', async (req, res) => {
   });
 
 // POST endpoint to insert payment data
-router.post('/payment', (req, res) => {
+router.post('/payment', async (req, res) => {
     const { tripId, paymentType, amount, paymentDate } = req.body;
 
     console.log('Request to process payment data:', req.body); // Log incoming request data
@@ -54,28 +54,26 @@ router.post('/payment', (req, res) => {
       VALUES (?, ?, ?, ?)
     `;
 
-    pool.getConnection((err, connection) => {
-        if (err) {
-            console.error('Error connecting to the database:', err);
-            return res.status(500).json({ message: 'Internal server error' });
-        }
+    try {
+        // Get a connection from the pool
+        const connection = await pool.getConnection();
 
         const startTime = Date.now(); // Log start time
 
-        connection.query(sql, [tripId, paymentType, amount, paymentDate], (error, result) => {
-            const queryDuration = Date.now() - startTime; // Log query duration
-            console.log('Query executed in:', queryDuration, 'ms');
-            connection.release(); // Release connection back to the pool
+        // Execute the query with async/await
+        const [result] = await connection.execute(sql, [tripId, paymentType, amount, paymentDate]);
 
-            if (error) {
-                console.error('Error executing SQL query:', error);
-                return res.status(500).json({ message: 'Internal server error' });
-            }
+        const queryDuration = Date.now() - startTime; // Log query duration
+        console.log('Query executed in:', queryDuration, 'ms');
 
-            console.log('Payment data inserted successfully');
-            res.status(200).json({ message: 'Payment data inserted successfully', paymentId: result.insertId });
-        });
-    });
+        connection.release(); // Release connection back to the pool
+
+        console.log('Payment data inserted successfully');
+        res.status(200).json({ message: 'Payment data inserted successfully', paymentId: result.insertId });
+    } catch (error) {
+        console.error('Error processing payment data:', error);
+        return res.status(500).json({ message: 'Internal server error' });
+    }
 });
 
 
