@@ -70,7 +70,7 @@ router.post('/trips', async (req, res) => {
         customer_rating, customer_feedback, duration_minutes_pick_desti, vehicle_type, distance_traveled, 
         cancellation_reason, cancel_by, pickupTime, dropOffTime, pickUpLatitude, pickUpLongitude, 
         dropOffLatitude, dropOffLongitude, payment_status
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
     try {
