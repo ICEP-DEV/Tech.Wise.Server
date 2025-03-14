@@ -250,6 +250,7 @@ router.get('/driverTrips', async (req, res) => {
 router.put('/trips/:id/status', async (req, res) => {
     const { id } = req.params;
     const { status, cancellation_reason, cancel_by } = req.body;
+    console.log("Received status:", status);
 
     // Ensure only valid statuses are accepted
     const validStatuses = ['pending', 'completed', 'cancelled', 'accepted'];
