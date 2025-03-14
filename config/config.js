@@ -9,11 +9,8 @@ const pool = mysql.createPool({
   database: 'sql8766593',
   waitForConnections: true,
   queueLimit: 0,
-  port: 3306,
-  connectTimeout: 10000, // 10 seconds timeout for establishing a connection
-  acquireTimeout: 10000, // 10 seconds timeout for acquiring a connection
+  port: 3306
 });
-
 
 // Handle connection errors globally
 pool.on('error', (err) => {
