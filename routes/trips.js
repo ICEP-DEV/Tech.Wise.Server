@@ -4,63 +4,61 @@ const pool = require('../config/config'); // Use pool for database connection
 const firestoreDb = require('../config/FirebaseConfig').db;
 
 // POST endpoint to create a new trip
-router.post('/trips', async (req, res) => {
-    console.log('Request Body:', req.body);
+router.post('/trips', (req, res) => {
+    console.log('Request Body:', req.body); // Log the incoming request body
 
     const {
         customerId, driverId, requestDate, currentDate, pickUpLocation, dropOffLocation, statuses,
-        customer_rating, customer_feedback, duration_minutes, vehicle_type, distance_traveled,
-        cancellation_reason, cancel_by, pickupTime, dropOffTime, pickUpCoordinates, dropOffCoordinates, 
-        payment_status
+        rating, feedback, duration_minutes, vehicle_type, distance_traveled, cancellation_reason,
+        cancel_by, pickupTime, dropOffTime, pickUpCoordinates, dropOffCoordinates
     } = req.body;
 
-    // Ensure required fields are present
-    if (!customerId || !driverId || !pickUpCoordinates || !dropOffCoordinates) {
+    // Check for required fields
+    if (!customerId || !driverId || !requestDate || !currentDate || !pickUpLocation || !dropOffLocation || !vehicle_type || !distance_traveled) {
         return res.status(400).json({ error: "Required fields are missing" });
     }
 
-    // Extract latitude and longitude from request body
-    const { latitude: pickUpLatitude, longitude: pickUpLongitude } = pickUpCoordinates;
-    const { latitude: dropOffLatitude, longitude: dropOffLongitude } = dropOffCoordinates;
-
-    // SQL query for inserting trip data
+    // Prepare SQL query to insert trip data into MySQL
     const sql = `
-    INSERT INTO trips (
-        customerId, driverId, requestDate, currentDate, pickUpLocation, dropOffLocation, statuses,
-        customer_rating, customer_feedback, duration_minutes_pick_desti, vehicle_type, distance_traveled, 
-        cancellation_reason, cancel_by, pickupTime, dropOffTime, pickUpLatitude, pickUpLongitude, 
-        dropOffLatitude, dropOffLongitude, payment_status
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO trip (
+            customerId, driverId, requestDate, currentDate, pickUpLocation, dropOffLocation, statuses,
+            customer_rating, customer_feedback, duration_minutes, vehicle_type, distance_traveled, cancellation_reason,
+            cancel_by, pickupTime, dropOffTime, pickUpLatitude, pickUpLongitude, dropOffLatitude, dropOffLongitude
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
-    try {
-        const connection = await pool.getConnection();
+    // Coordinates as DOUBLE values for MySQL
+    const pickUpLatitude = pickUpCoordinates.latitude;
+    const pickUpLongitude = pickUpCoordinates.longitude;
+    const dropOffLatitude = dropOffCoordinates.latitude;
+    const dropOffLongitude = dropOffCoordinates.longitude;
 
-        // Execute the query
-        const [result] = await connection.execute(sql, [
-            customerId, driverId, requestDate, currentDate, pickUpLocation, dropOffLocation, statuses,
-            customer_rating, customer_feedback, duration_minutes, vehicle_type, distance_traveled, 
-            cancellation_reason, cancel_by, pickupTime, dropOffTime, 
-            pickUpLatitude, pickUpLongitude, // Insert latitudes and longitudes as DOUBLE values
-            dropOffLatitude, dropOffLongitude, 
-            payment_status
-        ]);
+    // Execute the SQL query to insert into MySQL
+    db.query(sql, [
+        customerId, driverId, requestDate, currentDate, pickUpLocation, dropOffLocation, statuses,
+        rating, feedback, duration_minutes, vehicle_type, distance_traveled, cancellation_reason,
+        cancel_by, pickupTime, dropOffTime, pickUpLatitude, pickUpLongitude, dropOffLatitude, dropOffLongitude
+    ], (err, result) => {
 
-        connection.release(); // Release the connection back to the pool
-
-        const tripId = result.insertId; // Get the inserted trip ID
-        console.log("Trip inserteded into MySQL with ID:", tripId);
-
-            return res.status(200).json({ message: "Trip data saved successfully", tripId });
-
-        } finally {
-            connection.release(); // Always release the connection
+        if (err) {
+            console.error("Error saving trip data:", err);
+            return res.status(500).json({ error: "An error occurred while saving trip data" });
         }
-    } catch (err) {
-        console.error("Database Error:", err);
-        return res.status(500).json({ error: "Database error, please try again" });
-    }
+        
+        const tripId = result.insertId; // Get the inserted trip ID
+        if (!tripId) {
+            console.error("Trip ID not generated after insertion");
+            return res.status(500).json({ error: "Failed to generate trip ID after insertion" });
+        }
+
+        // Emit an event to notify drivers/customers
+        const io = req.app.get('io');
+        io.emit('newTrip', { tripId, customerId, driverId, pickUpLocation, dropOffLocation });
+
+        return res.status(200).json({ message: "Trip data saved successfully", tripId: tripId });
+    });
 });
+
 // Endpoint to fetch trips by user_id and status
 router.get('/tripHistory/:userId', (req, res) => {
     const userId = req.params.userId;
@@ -217,42 +215,7 @@ router.get('/driverTrips/:driverId', (req, res) => {
     });
 });
 
-// Update trip status when a driver accepts or declines
-router.get('/driverTrips/:driverId', (req, res) => {
-    const driverId = req.params.driverId;
 
-    // SQL query to fetch pending trips from the trips table
-    const query = `
-        SELECT * FROM trips
-        WHERE driverId = ? AND status = 'pending'
-        LIMIT 10; -- Optionally limit the number of trips for performance
-    `;
-
-    pool.getConnection((err, connection) => {
-        if (err) {
-            console.error('Database Connection Error:', err);
-            return res.status(500).send({ message: 'Error fetching trips' });
-        }
-
-        // Set a timeout for the query to avoid hanging
-        connection.query({ sql: query, timeout: 10000 }, [driverId], (err, results) => {
-            connection.release();
-
-            if (err) {
-                console.error('Error with query:', err);
-                return res.status(500).send({ message: 'Error with database query', error: err });
-            }
-
-            // Check if no trips are found
-            if (results.length === 0) {
-                return res.status(404).send({ message: 'No pending trips found' });
-            }
-
-            // Send the list of pending trips as the response
-            res.json(results);
-        });
-    });
-});
 
 // Update trip status when a driver accepts or declines
 router.put('/trips/:id/status', (req, res) => {
@@ -289,40 +252,5 @@ router.put('/trips/:id/status', (req, res) => {
     });
   });
   
-// Update trip status when a driver accepts or declines
-router.put('/trips/:id/status', (req, res) => {
-  const { id } = req.params;
-  const { status, cancellation_reason, cancel_by } = req.body;
-
-  // Ensure only valid statuses are accepted
-  const validStatuses = ['pending', 'completed', 'cancelled', 'accepted'];
-  if (!validStatuses.includes(status)) {
-    return res.status(400).json({ error: "Invalid status value" });
-  }
-
-  // Prepare SQL query to update trip status and other details
-  const sql = `
-    UPDATE trips
-    SET statuses = ?, cancellation_reason = ?, cancel_by = ?
-    WHERE id = ?
-  `;
-
-  // Use the pool to get a connection and execute the query
-  pool.execute(sql, [status, cancellation_reason, cancel_by, id], (err, result) => {
-    if (err) {
-      console.error("Error updating trip status:", err);
-      return res.status(500).json({ error: "Error updating trip status" });
-    }
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ error: "Trip not found" });
-    }
-
-    // Emit event to notify users about the status change
-    const io = req.app.get('io');
-    io.emit('tripStatusUpdated', { tripId: id, status });
-
-    res.status(200).json({ message: `Trip status updated to ${status}`, tripId: id });
-  });
-});
 
 module.exports = router;
