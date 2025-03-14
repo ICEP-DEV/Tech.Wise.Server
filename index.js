@@ -9,7 +9,7 @@ const Login = require('./routes/Login');
 const customerPayments = require('./routes/customerPayments');
 const cors = require('cors');
 const path = require('path');
-const pool = require('./config');  // Import MySQL pool
+const pool = require('./config/config');  // Import MySQL pool
 
 const app = express();
 const PORT = process.env.PORT || 3000;  // Allow port configuration
