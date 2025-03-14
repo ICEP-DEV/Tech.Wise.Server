@@ -26,9 +26,35 @@ router.post('/trips', async (req, res) => {
     const { latitude: pickUpLatitude, longitude: pickUpLongitude } = pickUpCoordinates || {};
     const { latitude: dropOffLatitude, longitude: dropOffLongitude } = dropOffCoordinates || {};
 
-    if (!pickUpLatitude || !pickUpLongitude || !dropOffLatitude || !dropOffLongitude) {
-        return res.status(400).json({ error: "Pickup or drop-off coordinates are missing" });
-    }
+    // Replace undefined values with null
+    const safeData = {
+        customerId: customerId || null,
+        driverId: driverId || null,
+        requestDate: requestDate || null,
+        currentDate: currentDate || null,
+        pickUpLocation: pickUpLocation || null,
+        dropOffLocation: dropOffLocation || null,
+        statuses: statuses || null,
+        customer_rating: customer_rating || null,
+        customer_feedback: customer_feedback || null,
+        duration_minutes: duration_minutes || null,
+        vehicle_type: vehicle_type || null,
+        distance_traveled: distance_traveled || null,
+        cancellation_reason: cancellation_reason || null,
+        cancel_by: cancel_by || null,
+        pickupTime: pickupTime || null,
+        dropOffTime: dropOffTime || null,
+        pickUpLatitude: pickUpLatitude || null,
+        pickUpLongitude: pickUpLongitude || null,
+        dropOffLatitude: dropOffLatitude || null,
+        dropOffLongitude: dropOffLongitude || null,
+        payment_status: payment_status || 'pending',  // Default to 'pending'
+        carMake: carData?.carMake || null,
+        carModel: carData?.carModel || null,
+        carYear: carData?.carYear || null,
+        carColour: carData?.carColour || null,
+        carImage: carData?.carImage || null
+    };
 
     // SQL query for inserting trip data with `payment_status = 'pending'`
     const sql = `
@@ -44,19 +70,14 @@ router.post('/trips', async (req, res) => {
         // Get a connection from the pool
         const connection = await pool.getConnection();
 
-        // Execute the query
+        // Execute the query with safe data
         const [result] = await connection.execute(sql, [
-            customerId, driverId, requestDate, currentDate, pickUpLocation, dropOffLocation, statuses,
-            customer_rating, customer_feedback, duration_minutes, vehicle_type, distance_traveled, 
-            cancellation_reason, cancel_by, pickupTime, dropOffTime, 
-            pickUpLatitude, pickUpLongitude, // Insert latitudes and longitudes as DOUBLE values
-            dropOffLatitude, dropOffLongitude, 
-            payment_status,
-            carData.carMake,
-            carData.carModel,
-            carData.carYear,
-            carData.carColour,
-            carData.carImage // You may need to adjust based on the actual image path or how you're storing it
+            safeData.customerId, safeData.driverId, safeData.requestDate, safeData.currentDate, safeData.pickUpLocation, 
+            safeData.dropOffLocation, safeData.statuses, safeData.customer_rating, safeData.customer_feedback, 
+            safeData.duration_minutes, safeData.vehicle_type, safeData.distance_traveled, safeData.cancellation_reason, 
+            safeData.cancel_by, safeData.pickupTime, safeData.dropOffTime, safeData.pickUpLatitude, 
+            safeData.pickUpLongitude, safeData.dropOffLatitude, safeData.dropOffLongitude, safeData.payment_status, 
+            safeData.carMake, safeData.carModel, safeData.carYear, safeData.carColour, safeData.carImage
         ]);
 
         connection.release(); // Release the connection back to the pool
@@ -64,7 +85,7 @@ router.post('/trips', async (req, res) => {
         const tripId = result.insertId; // Get the inserted trip ID
         console.log("Trip inserted into MySQL with ID:", tripId);
 
-        // Step 2: Respond back with success message and tripId
+        // Respond back with success message and tripId
         return res.status(200).json({ message: "Trip data saved successfully", tripId: tripId });
     } catch (err) {
         console.error("Error saving trip data:", err);
