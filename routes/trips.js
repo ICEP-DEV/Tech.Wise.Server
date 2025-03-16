@@ -80,10 +80,10 @@ router.post('/trips', async (req, res) => {
         // Execute the query
         const [result] = await connection.execute(sql, [
             customerId, driverId, requestDate, currentDate, pickUpLocation, dropOffLocation, statuses,
-            customer_rating, customer_feedback, duration_minutes, vehicle_type, distance_traveled, 
-            cancellation_reason, cancel_by, pickupTime, dropOffTime, 
+            customer_rating, customer_feedback, duration_minutes, vehicle_type, distance_traveled,
+            cancellation_reason, cancel_by, pickupTime, dropOffTime,
             pickUpLatitude, pickUpLongitude, // Insert latitudes and longitudes as DOUBLE values
-            dropOffLatitude, dropOffLongitude, 
+            dropOffLatitude, dropOffLongitude,
             payment_status
         ]);
 
@@ -139,7 +139,7 @@ router.post('/trips/update-location', async (req, res) => {
 
     try {
         const tripRef = firestoreDb.collection('trips').doc(`${tripId}`);
-        
+
         // Push the new location update to the 'route' array
         await tripRef.update({
             route: firestoreDb.FieldValue.arrayUnion({
@@ -228,7 +228,7 @@ router.get('/driverTrips', async (req, res) => {
 
     try {
         const startTime = Date.now(); // Log query start time
-        const [rows] = await pool.query(sql, [driverId]); 
+        const [rows] = await pool.query(sql, [driverId]);
         console.log(`Query executed in ${Date.now() - startTime} ms`);
 
         if (rows.length > 0) {
@@ -242,44 +242,55 @@ router.get('/driverTrips', async (req, res) => {
     }
 });
 
-  
-
-
-
 // Update trip status when a driver accepts or declines
-router.put('/trips/:id/status', (req, res) => {
+router.put('/trips/:id/status', async (req, res) => {
     const { id } = req.params;
     const { status, cancellation_reason, cancel_by } = req.body;
-  
+    console.log("Received status:", status);
+
     // Ensure only valid statuses are accepted
     const validStatuses = ['pending', 'completed', 'cancelled', 'accepted'];
     if (!validStatuses.includes(status)) {
-      return res.status(400).json({ error: "Invalid status value" });
+        return res.status(400).json({ error: "Invalid status value" });
     }
-  
+
+    // Log incoming request data
+    console.log(`Received update request for trip ID: ${id}`);
+    console.log(`Status: ${status}, Cancellation Reason: ${cancellation_reason}, Cancelled By: ${cancel_by}`);
     // Prepare SQL query to update trip status and other details
     const sql = `
-      UPDATE trips 
-      SET statuses = ?, cancellation_reason = ?, cancel_by = ? 
-      WHERE id = ?
-    `;
-  
-    db.query(sql, [status, cancellation_reason, cancel_by, id], (err, result) => {
-      if (err) {
-        console.error("Error updating trip status:", err);
-        return res.status(500).json({ error: "Error updating trip status" });
-      }
-      if (result.affectedRows === 0) {
-        return res.status(404).json({ error: "Trip not found" });
-      }
-  
-      // Emit event to notify users about the status change
-      const io = req.app.get('io');
-      io.emit('tripStatusUpdated', { tripId: id, status });
-  
-      res.status(200).json({ message: `Trip status updated to ${status}`, tripId: id });
-    });
-  });
-  
+    UPDATE trips 
+    SET statuses = ?, cancellation_reason = ?, cancel_by = ? 
+    WHERE id = ?
+  `;
+
+
+    const cancellationReasonValue = cancellation_reason || null;
+    const cancelByValue = cancel_by || null;
+
+    try {
+        // Update the values conditionally
+        const startTime = Date.now(); // Log query start time
+        const [result] = await pool.query(sql, [status, cancellationReasonValue, cancelByValue, id]);
+        console.log(`Query executed in ${Date.now() - startTime} ms`);
+
+        // Check the result of the update query
+        console.log('Update result:', result);
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ error: "Trip not found" });
+        }
+
+        // Emit event to notify users about the status change
+        const io = req.app.get('io');
+        io.emit('tripStatusUpdated', { tripId: id, status });
+
+        res.status(200).json({ message: `Trip status updated to ${status}`, tripId: id });
+    } catch (error) {
+        console.error("Error updating trip status:", error);
+        res.status(500).json({ error: "Error updating trip status" });
+    }
+});
+
 
 module.exports = router;
