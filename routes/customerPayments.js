@@ -10,7 +10,7 @@ router.get('/recipient', async (req, res) => {
   console.log('Fetching recipient for user_id:', user_id);
 
   if (!user_id) {
-      return res.status(400).json({ message: 'User ID is required' });
+    return res.status(400).json({ message: 'User ID is required' });
   }
 
   const sql = `
@@ -22,59 +22,53 @@ router.get('/recipient', async (req, res) => {
   `;
 
   try {
-      const startTime = Date.now();
-      const [rows] = await pool.query(sql, [user_id]);
-      console.log(`Query executed in ${Date.now() - startTime} ms`);
+    const startTime = Date.now();
+    const [rows] = await pool.query(sql, [user_id]);
+    console.log(`Query executed in ${Date.now() - startTime} ms`);
 
-      if (rows.length > 0) {
-          res.json({ recipients: rows });
-      } else {
-          res.status(404).json({ message: 'No recipient found. Please add your card details first.' });
-      }
+    if (rows.length > 0) {
+      res.json({ recipients: rows });
+    } else {
+      res.status(404).json({ message: 'No recipient found. Please add your card details first.' });
+    }
   } catch (error) {
-      console.error('Error executing query:', error);
-      res.status(500).json({ message: 'Internal server error' });
+    console.error('Error executing query:', error);
+    res.status(500).json({ message: 'Internal server error' });
   }
 });
 
-
 // POST endpoint to insert payment data
 router.post('/payment', async (req, res) => {
-    const { tripId, paymentType, amount, paymentDate } = req.body;
+  const { tripId, paymentType, amount, paymentDate } = req.body;
 
-    console.log('Request to process payment data:', req.body); // Log incoming request data
+  console.log('Request to process payment data:', req.body); // Log incoming request data
 
-    // Validate the required fields
-    if (!tripId || !paymentType || !amount || !paymentDate) {
-        return res.status(400).json({ message: 'Required fields are missing' });
-    }
+  // Validate the required fields
+  if (!tripId || !paymentType || !amount || !paymentDate) {
+    return res.status(400).json({ message: 'Required fields are missing' });
+  }
 
-    // SQL query to insert payment data into the database
-    const sql = `
-      INSERT INTO payment (tripId, paymentType, amount, paymentDate)
-      VALUES (?, ?, ?, ?)
-    `;
+  // SQL query to insert payment data into the database
+  const sql = `
+    INSERT INTO payment (tripId, paymentType, amount, paymentDate)
+    VALUES (?, ?, ?, ?)
+  `;
 
-    try {
-        // Get a connection from the pool
-        const connection = await pool.getConnection();
+  try {
+    const startTime = Date.now(); // Log start time
 
-        const startTime = Date.now(); // Log start time
+    // Execute the query using the pool.query method
+    const [result] = await pool.query(sql, [tripId, paymentType, amount, paymentDate]);
 
-        // Execute the query with async/await
-        const [result] = await connection.execute(sql, [tripId, paymentType, amount, paymentDate]);
+    const queryDuration = Date.now() - startTime; // Log query duration
+    console.log('Query executed in:', queryDuration, 'ms');
 
-        const queryDuration = Date.now() - startTime; // Log query duration
-        console.log('Query executed in:', queryDuration, 'ms');
-
-        connection.release(); // Release connection back to the pool
-
-        console.log('Payment data inserted successfully');
-        res.status(200).json({ message: 'Payment data inserted successfully', paymentId: result.insertId });
-    } catch (error) {
-        console.error('Error processing payment data:', error);
-        return res.status(500).json({ message: 'Internal server error' });
-    }
+    console.log('Payment data inserted successfully');
+    res.status(200).json({ message: 'Payment data inserted successfully', paymentId: result.insertId });
+  } catch (error) {
+    console.error('Error processing payment data:', error);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
 });
 
 
