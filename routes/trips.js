@@ -67,7 +67,7 @@ router.post('/trips', async (req, res) => {
     const sql = `
         INSERT INTO trips (
             customerId, driverId, requestDate, currentDate, pickUpLocation, dropOffLocation, statuses,
-            customer_rating, customer_feedback, duration_minutes_pick_desti, vehicle_type, distance_traveled, 
+            customer_rating, customer_feedback, duration_minutes, vehicle_type, distance_traveled, 
             cancellation_reason, cancel_by, pickupTime, dropOffTime, pickUpLatitude, pickUpLongitude, 
             dropOffLatitude, dropOffLongitude, payment_status
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
