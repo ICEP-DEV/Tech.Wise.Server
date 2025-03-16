@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const axios = require("axios");
-const db = require("../config/config");
+const pool = require("../config/config");
 const https = require('https');
 const { log } = require("console");
 require("dotenv").config();
@@ -149,54 +149,37 @@ router.put('/recipients/:cardId/select', async (req, res) => {
     return res.status(400).json({ error: "user_id and cardId are required" });
   }
 
-  // Start a transaction manually
-  db.beginTransaction((err) => {
-    if (err) {
-      console.error("Error starting transaction:", err);
-      return res.status(500).json({ error: "Failed to start transaction" });
-    }
+  const connection = await pool.getConnection(); // Get a connection from the pool
+
+  try {
+    // Start a transaction
+    await connection.beginTransaction();
 
     // First, set all other cards to is_selected = 0
-    db.query(
+    await connection.query(
       'UPDATE recipients SET is_selected = 0 WHERE user_id = ? AND id != ?',
-      [user_id, cardId],
-      (err, results) => {
-        if (err) {
-          return db.rollback(() => {
-            console.error("Error updating cards:", err);
-            return res.status(500).json({ error: "Failed to update cards" });
-          });
-        }
-
-        // Then, set the selected card's is_selected to 1
-        db.query(
-          'UPDATE recipients SET is_selected = 1 WHERE user_id = ? AND id = ?',
-          [user_id, cardId],
-          (err, results) => {
-            if (err) {
-              return db.rollback(() => {
-                console.error("Error updating selected card:", err);
-                return res.status(500).json({ error: "Failed to update selected card" });
-              });
-            }
-
-            // Commit the transaction if all queries are successful
-            db.commit((err) => {
-              if (err) {
-                return db.rollback(() => {
-                  console.error("Error committing transaction:", err);
-                  return res.status(500).json({ error: "Failed to commit transaction" });
-                });
-              }
-
-              // Respond with success
-              res.status(200).json({ message: "Card selection updated successfully" });
-            });
-          }
-        );
-      }
+      [user_id, cardId]
     );
-  });
+
+    // Then, set the selected card's is_selected to 1
+    await connection.query(
+      'UPDATE recipients SET is_selected = 1 WHERE user_id = ? AND id = ?',
+      [user_id, cardId]
+    );
+
+    // Commit the transaction if all queries are successful
+    await connection.commit();
+
+    res.status(200).json({ message: "Card selection updated successfully" });
+  } catch (error) {
+    // Rollback the transaction in case of error
+    await connection.rollback();
+    console.error("Error updating selected card:", error);
+    res.status(500).json({ error: "Failed to update selected card" });
+  } finally {
+    // Release the connection back to the pool
+    connection.release();
+  }
 });
 
 router.post("/withdraw", async (req, res) => {
@@ -208,7 +191,10 @@ router.post("/withdraw", async (req, res) => {
     return res.status(400).json({ error: "Missing required fields" });
   }
 
+  const connection = await pool.getConnection(); // Get a connection from the pool
+
   try {
+    // Assuming a dummy balance for now
     const dummyBalance = 5000;
     console.log("Dummy balance:", dummyBalance);
 
@@ -216,53 +202,60 @@ router.post("/withdraw", async (req, res) => {
       return res.status(400).json({ error: "Insufficient balance" });
     }
 
+    // Query to get the paystack_recipient_id for the given user_id
     const recipientQuery = `SELECT paystack_recipient_id FROM recipients WHERE user_id = ?`;
-    console.log("Executing query:", recipientQuery, [user_id]); // Log the query
+    console.log("Executing query:", recipientQuery, [user_id]);
 
-    db.query(recipientQuery, [user_id], async (err, results) => {
-      if (err) {
-        console.error("Database error:", err);
-        return res.status(500).json({ error: "Database error" });
-      }
+    const [results] = await connection.query(recipientQuery, [user_id]);
 
-      console.log("Database query results:", results); // Log the query results
-      const recipient_code = results[0]?.paystack_recipient_id;
+    console.log("Database query results:", results); // Log the query results
+    const recipient_code = results[0]?.paystack_recipient_id;
 
-      if (!recipient_code) {
-        return res.status(404).json({ error: "Recipient not found" });
-      }
+    if (!recipient_code) {
+      return res.status(404).json({ error: "Recipient not found" });
+    }
 
-      console.log("Recipient code:", recipient_code); // Log the recipient code
+    console.log("Recipient code:", recipient_code); // Log the recipient code
 
-      const transferResponse = await axios.post(
-        "https://api.paystack.co/transfer",
-        {
-          source: "balance",
-          amount: amount * 100,
-          recipient: recipient_code,
-          reason: reason
+    // Now perform the withdrawal via Paystack API
+    const transferResponse = await axios.post(
+      "https://api.paystack.co/transfer",
+      {
+        source: "balance",
+        amount: amount * 100, // Convert to kobo
+        recipient: recipient_code,
+        reason: reason,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${PAYSTACK_SECRET_KEY}`,
+          "Content-Type": "application/json",
         },
-        {
-          headers: {
-            Authorization: `Bearer ${PAYSTACK_SECRET_KEY}`,
-            "Content-Type": "application/json"
-          }
-        }
-      );
+      }
+    );
 
-      const transferData = transferResponse.data.data;
+    const transferData = transferResponse.data.data;
 
-      console.log("Withdrawal successful!");
-      res.json({
-        message: "Withdrawal successful",
-        transferData
-      });
+    console.log("Withdrawal successful!");
+
+    // Respond with the transfer data
+    res.json({
+      message: "Withdrawal successful",
+      transferData,
     });
   } catch (error) {
     console.error("Error initiating withdrawal:", error.response?.data || error.message);
-    res.status(500).json({ error: "Failed to process withdrawal" });
+
+    res.status(500).json({
+      error: "Failed to process withdrawal",
+      details: error.message,
+    });
+  } finally {
+    // Release the connection back to the pool
+    connection.release();
   }
 });
+
 
 // create customer in paystack
 // router.post("/create-customer", async (req, res) => {
@@ -385,13 +378,13 @@ router.post("/withdraw", async (req, res) => {
 //   }
 // });
 router.post('/initialize-transaction-with-plan', async (req, res) => {
-  try {
-    const { email, planType, cost, user_id } = req.body;
+  const { email, planType, cost, user_id } = req.body;
 
+  try {
     // Validate input fields
     if (!email || !cost || !planType || !user_id) {
-      throw new Error('Please provide a valid email, cost, plan type, and user ID.');
-    } 
+      return res.status(400).json({ error: 'Please provide a valid email, cost, plan type, and user ID.' });
+    }
 
     // Determine the plan code based on the plan type
     let plan_code = planType === "Weekly" ? PAYSTACK_PLAN_WEEKLY : PAYSTACK_PLAN_MONTHLY;
@@ -416,37 +409,38 @@ router.post('/initialize-transaction-with-plan', async (req, res) => {
 
     console.log("Paystack response:", paystackResponse.data); // Debugging
 
-    const authorization_url = paystackResponse.data.data.authorization_url;
-    const reference = paystackResponse.data.data.reference;
+    const { authorization_url, reference } = paystackResponse.data.data;
 
-    // Check if the user_id exists in the users table
-    const checkUserSql = 'SELECT id FROM users WHERE id = ?';
-    db.query(checkUserSql, [user_id], (err, result) => {
-      if (err) {
-        console.error("Error checking user:", err);
-        return res.status(500).json({ error: "Error checking user" });
-      }
-      if (result.length === 0) {
+    // Start a connection with the pool
+    const connection = await pool.getConnection();
+
+    try {
+      // Check if the user_id exists in the users table
+      const [userResults] = await connection.query('SELECT id FROM users WHERE id = ?', [user_id]);
+
+      if (userResults.length === 0) {
         return res.status(404).json({ error: "User not found" });
       }
 
       // If the user exists, insert the subscription into the subscriptions table
-      const sql = `
+      const insertSql = `
         INSERT INTO subscriptions (plan_name, user_id, amount, reference, statuses)
         VALUES (?, ?, ?, ?, '0')
       `;
 
-      db.query(sql, [planType, user_id, cost, reference], (err, result) => {
-        if (err) {
-          console.error("Database error:", err); 
-          return res.status(500).json({ error: "Database error" });
-        }
-        console.log("Subscription added successfully!");
-      });
-    });
+      const [insertResult] = await connection.query(insertSql, [planType, user_id, cost, reference]);
 
-    // Return authorization URL and reference to the client
-    res.json({ authorization_url, reference });
+      console.log("Subscription added successfully!", insertResult);
+
+      // Return authorization URL and reference to the client
+      res.json({ authorization_url, reference });
+
+    } catch (error) {
+      console.error("Database error:", error);
+      res.status(500).json({ error: "Database error" });
+    } finally {
+      connection.release(); // Ensure connection is released back to the pool
+    }
 
   } catch (error) {
     console.error("Paystack error:", error.response?.data || error.message);
@@ -461,6 +455,7 @@ router.post("/payment-callback", async (req, res) => {
   console.log("Verifying transaction with reference:", reference);
 
   try {
+    // Verify the Paystack transaction
     const verifyResponse = await axios.get(
       `https://api.paystack.co/transaction/verify/${reference}`,
       {
@@ -470,10 +465,11 @@ router.post("/payment-callback", async (req, res) => {
 
     console.log("Full Paystack Verification Response:", verifyResponse.data);
 
+    // Check if the transaction was successful
     if (verifyResponse.data.status && verifyResponse.data.data.status === "success") {
       const { data } = verifyResponse.data;
 
-      // Extract necessary details
+      // Extract necessary transaction details
       const transactionDetails = {
         customerId: data.customer.id,
         customer_code: data.customer.customer_code,
@@ -491,26 +487,39 @@ router.post("/payment-callback", async (req, res) => {
         reference: data.reference,
       };
 
-      // Store the transaction in the database (if needed)
-      const sql = `
-        UPDATE subscriptions
-        SET statuses = '1', authorization_code = ?, customer_code = ?, customer_id = ?
-        WHERE reference = ?
-      `;
+      // Start a connection with the pool
+      const connection = await pool.getConnection();
 
-      db.query(sql, [data.authorization.authorization_code,transactionDetails.customer_code,transactionDetails.customerId,transactionDetails.reference], (err) => {
-        if (err) {
-          console.error("Database Error:", err);
-          return res.status(500).json({ error: "Database error" });
-        }
+      try {
+        // Update the subscription status in the database
+        const sql = `
+          UPDATE subscriptions
+          SET statuses = '1', authorization_code = ?, customer_code = ?, customer_id = ?
+          WHERE reference = ?
+        `;
 
-        console.log("Transaction Verified and Subscription Updated!");
+        const [result] = await connection.query(sql, [
+          data.authorization.authorization_code,
+          transactionDetails.customer_code,
+          transactionDetails.customerId,
+          transactionDetails.reference,
+        ]);
+
+        console.log("Transaction Verified and Subscription Updated!", result);
+
+        // Respond with success and transaction details
         res.json({
           success: true,
           message: "Transaction verified and subscription updated.",
           transactionDetails, // Send all details to frontend
         });
-      });
+
+      } catch (err) {
+        console.error("Database Error:", err);
+        res.status(500).json({ error: "Database error" });
+      } finally {
+        connection.release(); // Ensure connection is released back to the pool
+      }
     } else {
       return res.status(400).json({ error: "Transaction not successful" });
     }
@@ -519,6 +528,7 @@ router.post("/payment-callback", async (req, res) => {
     res.status(500).json({ error: "Transaction verification failed" });
   }
 });
+
 
 
 // Fetch Subscription Details
@@ -576,6 +586,8 @@ router.post("/payment-callback", async (req, res) => {
 //     return res.json({ isFirstTime: false, subscription });
 //   });
 // });
+
+
 router.get("/subscription", async (req, res) => {
   try {
     let { customer } = req.query;
@@ -626,40 +638,42 @@ router.get("/subscription", async (req, res) => {
   } 
 });
 
+
 router.get("/get-customer-id", async (req, res) => {
   try {
     let { user_id } = req.query;
     console.log("User ID received:", user_id);
 
+    // Validate that the user_id is provided
     if (!user_id) {
       return res.status(400).json({ error: "Please provide a valid user ID" });
     }
 
-    db.query(
-      "SELECT customer_id FROM subscriptions WHERE user_id = ? LIMIT 1",
-      [user_id],
-      (error, results) => {
-        if (error) {
-          console.error("🔥 Database Query Error:", error);
-          return res.status(500).json({ error: "Internal server error" });
-        }
+    // Define the SQL query to fetch the customer_id
+    const sql = "SELECT customer_id FROM subscriptions WHERE user_id = ? LIMIT 1";
+    
+    // Use pool.query for a promise-based database query
+    const startTime = Date.now();
+    const [rows] = await pool.query(sql, [user_id]);
+    console.log(`Query executed in ${Date.now() - startTime} ms`);
 
-        if (!results || results.length === 0) {
-          console.log("❌ No customer ID found for user_id:", user_id);
-          return res.status(404).json({ error: "No customer ID found for this user" });
-        }
+    // Handle case where no customer ID is found
+    if (rows.length === 0) {
+      console.log("❌ No customer ID found for user_id:", user_id);
+      return res.status(404).json({ error: "No customer ID found for this user" });
+    }
 
-        console.log("✅ Found customer ID:", results[0].customer_id);
-        return res.status(200).json({ customer_id: results[0].customer_id });
-      }
-    );
+    // Return the found customer ID
+    console.log("✅ Found customer ID:", rows[0].customer_id);
+    return res.status(200).json({ customer_id: rows[0].customer_id });
+    
   } catch (error) {
     console.error("🔥 Backend Error fetching customer ID:", error);
     return res.status(500).json({ error: "Internal server error" });
   }
 });
 
-// router.get('/update-payment-method', async (req, res) => {
+
 //   try {
 //     const { subscription_code } = req.query;
 
