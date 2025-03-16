@@ -35,7 +35,7 @@ router.get('/paystack-banks', async (req, res) => {
 // Create recipient for payment
 router.post("/create-recipient", async (req, res) => {
   const { email, account_number, bank_code, first_name, country_code, user_id } = req.body;
-  console.log('recipienttttttttttttttttttttttttttttttttttttttttttttttttt', email, account_number, bank_code, first_name, country_code, user_id);
+  console.log('Creating recipient with data:', email, account_number, bank_code, first_name, country_code, user_id);
 
   if (!email || !account_number || !bank_code || !first_name || !country_code || !user_id) {
     return res.status(400).json({ error: "Missing required fields" });
@@ -44,6 +44,7 @@ router.post("/create-recipient", async (req, res) => {
   try {
     console.log("Creating Paystack Recipient...");
 
+    // Call Paystack API to create the recipient
     const response = await axios.post(
       "https://api.paystack.co/transferrecipient",
       {
@@ -63,72 +64,82 @@ router.post("/create-recipient", async (req, res) => {
       }
     );
 
+    // Ensure the response data is as expected
+    if (!response.data || !response.data.data) {
+      return res.status(500).json({ error: "Invalid response from Paystack API" });
+    }
+
     const recipientData = response.data.data;
+
+    // Ensure recipient data contains the expected fields
+    if (!recipientData.recipient_code) {
+      return res.status(500).json({ error: "Recipient creation failed: missing recipient_code" });
+    }
 
     // Extract the last four digits from the account number
     const last_four_digits = account_number.slice(-4);
 
-    // Store recipient in your database
+    // SQL query to insert the new recipient into the database
     const sql = `
       INSERT INTO recipients (paystack_recipient_id, bank_code, country_code, user_id, last_four_digits)
       VALUES (?, ?, ?, ?, ?)
     `;
-    db.query(
-      sql,
-      [
-        recipientData.recipient_code,
-        bank_code,
-        country_code,
-        user_id,  // Include the user ID in the database query
-        last_four_digits // Include the last four digits in the database query
-      ],
-      (err) => {
-        if (err) {
-          console.error("Database error:", err);
-          return res.status(500).json({ error: "Database error" });
-        }
-        console.log("Recipient created and stored in the database!");
 
-        res.json({ recipient_code: recipientData.recipient_code });
-      }
-    );
+    // Use pool.query to execute the SQL query
+    const [result] = await pool.query(sql, [
+      recipientData.recipient_code,
+      bank_code,
+      country_code,
+      user_id,  // Include the user ID in the database query
+      last_four_digits // Include the last four digits in the database query
+    ]);
+
+    console.log("Recipient created and stored in the database!");
+
+    // Return the recipient code as the response
+    res.json({ recipient_code: recipientData.recipient_code });
+
   } catch (error) {
     console.error("Error creating Paystack recipient:", error.response?.data || error.message);
     res.status(500).json({ error: "Failed to create recipient" });
   }
 });
 
-router.get('/recipients', async (req, res) => {
-  const { user_id } = req.query;  // Extract user_id from query parameters
 
-  // Validate that the user_id is provided
+// Endpoint to fetch recipient data
+router.get('/recipient', async (req, res) => {
+  const { user_id } = req.query;
+
+  console.log('Fetching recipient for user_id:', user_id);
+
   if (!user_id) {
-    return res.status(400).json({ error: "user_id is required" });
+    return res.status(400).json({ message: 'User ID is required' });
   }
 
-  // SQL query to get recipients based on the user_id
-  const sql = "SELECT id, paystack_recipient_id, last_four_digits, is_selected  FROM recipients WHERE user_id = ?";
+  const sql = `
+      SELECT 
+          id, paystack_recipient_id, bank_code, country_code, user_id, 
+          created_at, last_four_digits, is_selected 
+      FROM recipients 
+      WHERE user_id = ?
+  `;
 
   try {
-    db.query(sql, [user_id], (err, results) => {
-      if (err) {
-        console.error("Database error:", err);
-        return res.status(500).json({ error: "Database error" });
-      }
+    const startTime = Date.now();
+    const [rows] = await pool.query(sql, [user_id]);
+    console.log(`Query executed in ${Date.now() - startTime} ms`);
 
-      // Return the results as JSON
-      res.json(results);
-    });
+    if (rows.length > 0) {
+      res.json({ recipients: rows });
+    } else {
+      res.status(404).json({ message: 'No recipient found. Please add your card details first.' });
+    }
   } catch (error) {
-    console.error("Error fetching recipients:", error);
-    res.status(500).json({ error: "Failed to fetch recipients" });
+    console.error('Error executing query:', error);
+    res.status(500).json({ message: 'Internal server error' });
   }
 });
 
-// Assuming you have an Express server and MySQL database
-
-// PUT route to update the selected card
-// Select a card as the primary card
 // Endpoint to update the 'is_selected' value for a card
 router.put('/recipients/:cardId/select', async (req, res) => {
   const { user_id } = req.body;  // Assuming user_id is passed in the request body

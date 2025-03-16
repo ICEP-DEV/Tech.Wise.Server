@@ -3,39 +3,39 @@ const router = express.Router();
 const pool = require('../config/config'); // Use the pool for database connection
 
 
-// Endpoint to fetch recipient data
-router.get('/recipient', async (req, res) => {
-  const { user_id } = req.query;
+// // Endpoint to fetch recipient data
+// router.get('/recipient', async (req, res) => {
+//   const { user_id } = req.query;
 
-  console.log('Fetching recipient for user_id:', user_id);
+//   console.log('Fetching recipient for user_id:', user_id);
 
-  if (!user_id) {
-    return res.status(400).json({ message: 'User ID is required' });
-  }
+//   if (!user_id) {
+//     return res.status(400).json({ message: 'User ID is required' });
+//   }
 
-  const sql = `
-      SELECT 
-          id, paystack_recipient_id, bank_code, country_code, user_id, 
-          created_at, last_four_digits, is_selected 
-      FROM recipients 
-      WHERE user_id = ?
-  `;
+//   const sql = `
+//       SELECT 
+//           id, paystack_recipient_id, bank_code, country_code, user_id, 
+//           created_at, last_four_digits, is_selected 
+//       FROM recipients 
+//       WHERE user_id = ?
+//   `;
 
-  try {
-    const startTime = Date.now();
-    const [rows] = await pool.query(sql, [user_id]);
-    console.log(`Query executed in ${Date.now() - startTime} ms`);
+//   try {
+//     const startTime = Date.now();
+//     const [rows] = await pool.query(sql, [user_id]);
+//     console.log(`Query executed in ${Date.now() - startTime} ms`);
 
-    if (rows.length > 0) {
-      res.json({ recipients: rows });
-    } else {
-      res.status(404).json({ message: 'No recipient found. Please add your card details first.' });
-    }
-  } catch (error) {
-    console.error('Error executing query:', error);
-    res.status(500).json({ message: 'Internal server error' });
-  }
-});
+//     if (rows.length > 0) {
+//       res.json({ recipients: rows });
+//     } else {
+//       res.status(404).json({ message: 'No recipient found. Please add your card details first.' });
+//     }
+//   } catch (error) {
+//     console.error('Error executing query:', error);
+//     res.status(500).json({ message: 'Internal server error' });
+//   }
+// });
 
 // POST endpoint to insert payment data
 router.post('/payment', async (req, res) => {
