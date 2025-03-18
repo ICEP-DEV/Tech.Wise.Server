@@ -246,25 +246,37 @@ router.get('/driverTrips', async (req, res) => {
 router.put('/trips/:id/status', async (req, res) => {
     const { id } = req.params;
     const { status, cancellation_reason, cancel_by } = req.body;
-    console.log("Received status:", status);
 
-    // Ensure only valid statuses are accepted
+    // Ensure the trip ID is valid (numeric check or whatever format you use)
+    if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid trip ID format" });
+    }
+
+    // Ensure status is provided and valid
     const validStatuses = ['pending', 'completed', 'cancelled', 'accepted'];
-    if (!validStatuses.includes(status)) {
+    if (!status || !validStatuses.includes(status)) {
         return res.status(400).json({ error: "Invalid status value" });
+    }
+
+    // Ensure cancellation_reason and cancel_by are only included if status is 'cancelled'
+    if (status === 'cancelled') {
+        if (!cancellation_reason || !cancel_by) {
+            return res.status(400).json({ error: "Cancellation reason and cancel by are required for cancelled status" });
+        }
     }
 
     // Log incoming request data
     console.log(`Received update request for trip ID: ${id}`);
     console.log(`Status: ${status}, Cancellation Reason: ${cancellation_reason}, Cancelled By: ${cancel_by}`);
+
     // Prepare SQL query to update trip status and other details
     const sql = `
-    UPDATE trips 
-    SET statuses = ?, cancellation_reason = ?, cancel_by = ? 
-    WHERE id = ?
-  `;
+        UPDATE trips 
+        SET statuses = ?, cancellation_reason = ?, cancel_by = ? 
+        WHERE id = ?
+    `;
 
-
+    // Use null for missing cancellation_reason or cancel_by
     const cancellationReasonValue = cancellation_reason || null;
     const cancelByValue = cancel_by || null;
 
@@ -281,9 +293,11 @@ router.put('/trips/:id/status', async (req, res) => {
             return res.status(404).json({ error: "Trip not found" });
         }
 
-        // Emit event to notify users about the status change
+        // Emit event to notify users about the status change (ensure socket.io is configured)
         const io = req.app.get('io');
-        io.emit('tripStatusUpdated', { tripId: id, status });
+        if (io) {
+            io.emit('tripStatusUpdated', { tripId: id, status });
+        }
 
         res.status(200).json({ message: `Trip status updated to ${status}`, tripId: id });
     } catch (error) {
