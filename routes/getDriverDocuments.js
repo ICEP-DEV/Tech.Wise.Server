@@ -62,29 +62,33 @@ const upload = multer({ storage });
 
 // Route for Document Upload
 //inserting driver details
+// Route for Document Upload (Inserting driver details)
 router.post('/driver_details', upload.fields([
   { name: 'photo', maxCount: 1 },
   { name: 'id_copy', maxCount: 1 },
   { name: 'police_clearance', maxCount: 1 },
   { name: 'pdp', maxCount: 1 },
-  { name: 'car_inspection', maxCount: 1 }  // Added car_inspection field
-]), (req, res) => {
+  { name: 'car_inspection', maxCount: 1 } // Added car_inspection field
+]), async (req, res) => {
   console.log("Request Body:", req.body);
 
   const { gender, userId, payment_url } = req.body;
   const { photo, id_copy, police_clearance, pdp, car_inspection } = req.files;
 
+  // Validate that required fields are provided
+  if (!userId || !gender || !payment_url || !photo || !id_copy || !police_clearance || !pdp || !car_inspection) {
+    return res.status(400).json({ message: 'All fields are required' });
+  }
+
   // SQL query to insert the data into the database
-
-  // Add logic for inserting car_inspection into the database
-
-  
-  const query = `
-      INSERT INTO driver (users_id, gender, URL_payment, photo, id_copy, police_clearance, pdp, car_inspection)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  const sql = `
+    INSERT INTO driver (users_id, gender, URL_payment, photo, id_copy, police_clearance, pdp, car_inspection)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
   `;
 
-  db.query(query, [
+  try {
+    const startTime = Date.now();
+    await pool.query(sql, [
       userId,
       gender,
       payment_url,
@@ -93,15 +97,18 @@ router.post('/driver_details', upload.fields([
       police_clearance[0].filename,
       pdp[0].filename,
       car_inspection[0].filename   // Insert car_inspection file
-  ], (err, result) => {
-      if (err) {
-          console.log(err);
-          res.status(500).json({ error: 'Error saving driver documents.' });
-      } else {
-          res.json({ message: 'Driver documents uploaded successfully.' });
-      }
-  });
+    ]);
+    console.log(`Query executed in ${Date.now() - startTime} ms`);
+
+    // Respond with success message
+    res.json({ message: 'Driver documents uploaded successfully.' });
+
+  } catch (error) {
+    console.error('Error executing query:', error);
+    res.status(500).json({ message: 'Internal server error while saving driver documents.' });
+  }
 });
+
 
 
 // getting driver details
