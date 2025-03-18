@@ -272,7 +272,7 @@ router.put('/trips/:id/status', async (req, res) => {
     // Prepare SQL query to update trip status and other details
     const sql = `
         UPDATE trips 
-        SET statuses = ?, cancellation_reason = ?, cancel_by = ? 
+        SET status = ?, cancellation_reason = ?, cancel_by = ? 
         WHERE id = ?
     `;
 
@@ -287,9 +287,8 @@ router.put('/trips/:id/status', async (req, res) => {
         console.log(`Query executed in ${Date.now() - startTime} ms`);
 
         // Check the result of the update query
-        console.log('Update result:', result);
-
         if (result.affectedRows === 0) {
+            console.log("No rows updated, check if the trip ID exists");
             return res.status(404).json({ error: "Trip not found" });
         }
 
