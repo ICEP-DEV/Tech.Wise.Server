@@ -112,72 +112,84 @@ router.post('/driver_details', upload.fields([
 
 // getting driver details
 // Endpoint to fetch driver details by user ID
-router.get('/more_details/user', (req, res) => {
-  const userId = req.query.userId;
+// Endpoint to fetch driver details by user ID
+router.get('/more_details/user', async (req, res) => {
+  const { userId } = req.query;  // Get userId from query params
+
+  console.log('Fetching driver details for userId:', userId);
 
   if (!userId) {
-      return res.status(400).json({ error: "User ID is required" });
+    return res.status(400).json({ message: 'User ID is required' });
   }
-  // Construct SQL SELECT query
+
   const sql = "SELECT * FROM driver WHERE users_id = ?";
 
-  // Execute the SQL query
-  db.query(sql, [userId], (err, results) => {
-      if (err) {
-          console.error("Error fetching driver details by user ID:", err);
-          return res.status(500).json({ error: "An error occurred while fetching driver details" });
-      }
+  try {
+    const startTime = Date.now();
+    const [rows] = await pool.query(sql, [userId]);
+    console.log(`Query executed in ${Date.now() - startTime} ms`);
 
-      // Check if driver details for the user exist
-      if (results.length === 0) {
-          return res.status(404).json({ message: "Driver details not found for the user" });
-      }
+    // If no records are found, return a 404 status
+    if (rows.length === 0) {
+      return res.status(404).json({ message: 'Driver details not found for this user' });
+    }
 
-      // Driver details found, return the data
-      return res.status(200).json({ driver: results }); // <-- Changed key to 'driver'
-  });
+    // If driver details are found, return them in the response
+    res.json({ driver: rows });
+  } catch (error) {
+    console.error('Error executing query:', error);
+    res.status(500).json({ message: 'Internal server error while fetching driver details' });
+  }
 });
 
-// Endpoint to fetch driver documents
-router.get('/driver_documents/:id', (req, res) => {
-  const driverId = req.params.id;
 
-  // Query the database to fetch documents for the specified driver
+// Endpoint to fetch driver documents by driver ID
+router.get('/driver_documents/:id', async (req, res) => {
+  const driverId = req.params.id;  // Get driverId from URL params
+
+  console.log('Fetching driver documents for driverId:', driverId);
+
+  if (!driverId) {
+    return res.status(400).json({ message: 'Driver ID is required' });
+  }
+
   const sql = "SELECT * FROM driver WHERE users_id = ?";
-  db.query(sql, [driverId], (err, results) => {
-      if (err) {
-          console.error("Error fetching driver documents:", err);
-          return res.status(500).json({ error: "An error occurred while fetching documents" });
-      }
-      // Check if any documents were found
-      if (results.length === 0) {
-          return res.status(404).json({ message: "No documents found for the specified driver" });
-      }
-      // Send the fetched documents back to the client
-      return res.status(200).json(results);
-  });
+
+  try {
+    const startTime = Date.now();
+    const [rows] = await pool.query(sql, [driverId]);
+    console.log(`Query executed in ${Date.now() - startTime} ms`);
+
+    // If no records are found, return a 404 status
+    if (rows.length === 0) {
+      return res.status(404).json({ message: 'No documents found for the specified driver' });
+    }
+
+    // If driver documents are found, return them in the response
+    res.json({ documentsFound: true, documents: rows });
+  } catch (error) {
+    console.error('Error executing query:', error);
+    res.status(500).json({ message: 'Internal server error while fetching driver documents' });
+  }
 });
 
-// Endpoint to update driver documents
+
+// Endpoint to update driver documents by driver ID
 router.put('/driver_documents/:id', upload.fields([
   { name: 'photo', maxCount: 1 },
   { name: 'id_copy', maxCount: 1 },
   { name: 'police_clearance', maxCount: 1 },
   { name: 'pdp', maxCount: 1 }
-]), (req, res) => {
-  const driverId = req.params.id;
+]), async (req, res) => {
+  const driverId = req.params.id;  // Get driverId from URL params
 
-  // Log the request body and files to inspect the data
-  console.log("Request Body:", req.body);
-  console.log("Uploaded Files:", req.files);
+  console.log('Updating driver documents for driverId:', driverId);
 
   // Extract the necessary fields from the request body
   const { payment_url } = req.body;
-
-  // Extract the uploaded files from req.files
   const { photo, id_copy, police_clearance, pdp } = req.files;
 
-  // Create an array of fields to update, only including those that were provided in the request
+  // Create an array of fields to update, only including those that were provided
   const updates = [];
   if (photo) updates.push(`photo = '${photo[0].filename}'`);
   if (id_copy) updates.push(`id_copy = '${id_copy[0].filename}'`);
@@ -187,27 +199,30 @@ router.put('/driver_documents/:id', upload.fields([
 
   // If there are no updates to be made, return an error
   if (updates.length === 0) {
-      return res.status(400).json({ error: "No valid fields provided for update" });
+    return res.status(400).json({ message: 'No valid fields provided for update' });
   }
 
   // Construct the SQL UPDATE query
   const sql = `UPDATE driver SET ${updates.join(', ')} WHERE users_id = ?`;
 
-  // Execute the SQL query
-  db.query(sql, [driverId], (err, result) => {
-      if (err) {
-          console.error("Error occurred during document update:", err);
-          return res.status(500).json({ error: "An error occurred during the document update" });
-      }
+  try {
+    const startTime = Date.now();
+    const [result] = await pool.query(sql, [driverId]);
+    console.log(`Query executed in ${Date.now() - startTime} ms`);
 
-      // If no rows were affected, the driver ID might be incorrect
-      if (result.affectedRows === 0) {
-          return res.status(404).json({ message: "Driver not found or no changes made" });
-      }
+    // If no rows were affected, return a 404 (driver not found or no changes made)
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: 'Driver not found or no changes made' });
+    }
 
-      return res.status(200).json({ message: "Driver documents updated successfully", result });
-  });
+    // If the update is successful, return a success message
+    res.status(200).json({ message: 'Driver documents updated successfully', result });
+  } catch (error) {
+    console.error('Error executing query:', error);
+    res.status(500).json({ message: 'Internal server error while updating driver documents' });
+  }
 });
+
 
 
 
