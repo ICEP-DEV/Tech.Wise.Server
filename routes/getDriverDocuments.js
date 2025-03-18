@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const db = require("../config/config");
+const pool = require("../config/config");
 require("dotenv").config();
 
 const cors = require('cors');
@@ -13,25 +13,41 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 // Endpoint to fetch driver documents
+// Endpoint to fetch driver documents
 router.get('/getDriverDocuments', async (req, res) => {
   const { userId } = req.query;  // Get userId from query params
-  
+
+  console.log('Fetching driver documents for userId:', userId);
+
   if (!userId) {
-    return res.status(400).json({ error: 'User ID is required' });
+    return res.status(400).json({ message: 'User ID is required' });
   }
 
   // Query the database for driver documents
-  const query = `SELECT photo, id_copy, police_clearance, pdp, car_inspection FROM driver WHERE users_id = ?`;
-  db.query(query, [userId], (err, results) => {
-    if (err) return res.status(500).json({ error: err.message });
-    
-    // If no records are found, return false
-    if (results.length === 0) return res.status(404).json({ message: 'No records found', documentsFound: false });
-    
-    // If records are found, return the documents
-    res.json({ documentsFound: true, documents: results[0] });
-  });
+  const sql = `
+    SELECT photo, id_copy, police_clearance, pdp, car_inspection
+    FROM driver
+    WHERE users_id = ?
+  `;
+
+  try {
+    const startTime = Date.now();
+    const [rows] = await pool.query(sql, [userId]);
+    console.log(`Query executed in ${Date.now() - startTime} ms`);
+
+    // If no records are found, return a 404 status
+    if (rows.length === 0) {
+      return res.status(404).json({ message: 'No documents found for this user.' });
+    }
+
+    // If documents are found, return them
+    res.json({ documentsFound: true, documents: rows[0] });
+  } catch (error) {
+    console.error('Error executing query:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
 });
+
 
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
@@ -46,29 +62,33 @@ const upload = multer({ storage });
 
 // Route for Document Upload
 //inserting driver details
+// Route for Document Upload (Inserting driver details)
 router.post('/driver_details', upload.fields([
   { name: 'photo', maxCount: 1 },
   { name: 'id_copy', maxCount: 1 },
   { name: 'police_clearance', maxCount: 1 },
   { name: 'pdp', maxCount: 1 },
-  { name: 'car_inspection', maxCount: 1 }  // Added car_inspection field
-]), (req, res) => {
+  { name: 'car_inspection', maxCount: 1 } // Added car_inspection field
+]), async (req, res) => {
   console.log("Request Body:", req.body);
 
   const { gender, userId, payment_url } = req.body;
   const { photo, id_copy, police_clearance, pdp, car_inspection } = req.files;
 
+  // Validate that required fields are provided
+  if (!userId || !gender || !payment_url || !photo || !id_copy || !police_clearance || !pdp || !car_inspection) {
+    return res.status(400).json({ message: 'All fields are required' });
+  }
+
   // SQL query to insert the data into the database
-
-  // Add logic for inserting car_inspection into the database
-
-  
-  const query = `
-      INSERT INTO driver (users_id, gender, URL_payment, photo, id_copy, police_clearance, pdp, car_inspection)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  const sql = `
+    INSERT INTO driver (users_id, gender, URL_payment, photo, id_copy, police_clearance, pdp, car_inspection)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
   `;
 
-  db.query(query, [
+  try {
+    const startTime = Date.now();
+    await pool.query(sql, [
       userId,
       gender,
       payment_url,
@@ -77,14 +97,16 @@ router.post('/driver_details', upload.fields([
       police_clearance[0].filename,
       pdp[0].filename,
       car_inspection[0].filename   // Insert car_inspection file
-  ], (err, result) => {
-      if (err) {
-          console.log(err);
-          res.status(500).json({ error: 'Error saving driver documents.' });
-      } else {
-          res.json({ message: 'Driver documents uploaded successfully.' });
-      }
-  });
+    ]);
+    console.log(`Query executed in ${Date.now() - startTime} ms`);
+
+    // Respond with success message
+    res.json({ message: 'Driver documents uploaded successfully.' });
+
+  } catch (error) {
+    console.error('Error executing query:', error);
+    res.status(500).json({ message: 'Internal server error while saving driver documents.' });
+  }
 });
 
 
