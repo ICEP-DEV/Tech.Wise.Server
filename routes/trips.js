@@ -224,7 +224,7 @@ router.get('/driverTrips', async (req, res) => {
     const sql = `
       SELECT * FROM trips 
       WHERE driverId = ? AND statuses = 'pending'
-      ORDER BY createdAt DESC LIMIT 1
+      ORDER BY currentDate DESC LIMIT 1
     `;
 
     try {
