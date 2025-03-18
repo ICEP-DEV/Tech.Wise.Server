@@ -245,6 +245,7 @@ router.get('/driverTrips', async (req, res) => {
 
 
 // Endpoint to update the trip status
+// Endpoint to update the trip status
 router.put('/trips/:tripId/status', async (req, res) => {
     const { tripId } = req.params; // Get the trip ID from the URL
     const { status, cancellation_reason, cancel_by } = req.body; // Get the status and other details from the request body
