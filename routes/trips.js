@@ -277,8 +277,8 @@ router.put('/trips/:id/status', async (req, res) => {
     `;
 
     // Use null for missing cancellation_reason or cancel_by
-    const cancellationReasonValue = cancellation_reason || null;
-    const cancelByValue = cancel_by || null;
+    const cancellationReasonValue = status === 'cancelled' ? cancellation_reason : null;
+    const cancelByValue = status === 'cancelled' ? cancel_by : null;
 
     try {
         // Update the values conditionally
@@ -305,6 +305,7 @@ router.put('/trips/:id/status', async (req, res) => {
         res.status(500).json({ error: "Error updating trip status" });
     }
 });
+
 
 
 module.exports = router;
