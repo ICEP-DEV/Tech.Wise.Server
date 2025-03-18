@@ -210,7 +210,7 @@ router.get('/api/car-listings', async (req, res) => {
     }
 });
 
-// Endpoint to fetch trips for a specific driver
+// Endpoint to fetch the latest pending trip for a specific driver
 router.get('/driverTrips', async (req, res) => {
     const { driverId } = req.query; // Use query parameters instead of route params
 
@@ -224,6 +224,7 @@ router.get('/driverTrips', async (req, res) => {
     const sql = `
       SELECT * FROM trips 
       WHERE driverId = ? AND statuses = 'pending'
+      ORDER BY createdAt DESC LIMIT 1
     `;
 
     try {
@@ -232,7 +233,7 @@ router.get('/driverTrips', async (req, res) => {
         console.log(`Query executed in ${Date.now() - startTime} ms`);
 
         if (rows.length > 0) {
-            res.json({ trips: rows }); // Return trips as an array
+            res.json({ trips: rows }); // Return the latest trip as an array
         } else {
             res.status(404).json({ message: 'No pending trips found' });
         }
@@ -241,6 +242,7 @@ router.get('/driverTrips', async (req, res) => {
         res.status(500).json({ message: 'Internal server error' });
     }
 });
+
 
 // Update trip status when a driver accepts or declines
 router.put('/trips/:id/status', async (req, res) => {
