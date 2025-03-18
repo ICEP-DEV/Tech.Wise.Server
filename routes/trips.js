@@ -244,66 +244,37 @@ router.get('/driverTrips', async (req, res) => {
 });
 
 
-// Update trip status when a driver accepts or declines
-router.put('/trips/:id/status', async (req, res) => {
-    const { id } = req.params;
-    const { status, cancellation_reason, cancel_by } = req.body;
+// Endpoint to update the trip status
+router.put('/trips/:tripId/status', async (req, res) => {
+    const { tripId } = req.params; // Get the trip ID from the URL
+    const { status, cancellation_reason, cancel_by } = req.body; // Get the status and other details from the request body
 
-    // Ensure the trip ID is valid (numeric check or whatever format you use)
-    if (isNaN(id)) {
-        return res.status(400).json({ error: "Invalid trip ID format" });
+    // Validate the data
+    if (!status) {
+        return res.status(400).json({ message: 'Status is required' });
     }
 
-    // Ensure status is provided and valid
-    const validStatuses = ['pending', 'completed', 'cancelled', 'accepted'];
-    if (!status || !validStatuses.includes(status)) {
-        return res.status(400).json({ error: "Invalid status value" });
-    }
-
-    // Ensure cancellation_reason and cancel_by are only included if status is 'cancelled'
-    if (status === 'cancelled') {
-        if (!cancellation_reason || !cancel_by) {
-            return res.status(400).json({ error: "Cancellation reason and cancel by are required for cancelled status" });
-        }
-    }
-
-    // Log incoming request data
-    console.log(`Received update request for trip ID: ${id}`);
-    console.log(`Status: ${status}, Cancellation Reason: ${cancellation_reason}, Cancelled By: ${cancel_by}`);
-
-    // Prepare SQL query to update trip status and other details
+    // Prepare the SQL query to update the trip status
     const sql = `
-        UPDATE trips 
-        SET status = ?, cancellation_reason = ?, cancel_by = ? 
-        WHERE id = ?
+      UPDATE trips
+      SET statuses = ?, cancellation_reason = ?, cancel_by = ?
+      WHERE id = ?
     `;
 
-    // Use null for missing cancellation_reason or cancel_by
-    const cancellationReasonValue = status === 'cancelled' ? cancellation_reason : null;
-    const cancelByValue = status === 'cancelled' ? cancel_by : null;
-
     try {
-        // Update the values conditionally
         const startTime = Date.now(); // Log query start time
-        const [result] = await pool.query(sql, [status, cancellationReasonValue, cancelByValue, id]);
+        const [result] = await pool.query(sql, [status, cancellation_reason, cancel_by, tripId]);
         console.log(`Query executed in ${Date.now() - startTime} ms`);
 
-        // Check the result of the update query
-        if (result.affectedRows === 0) {
-            console.log("No rows updated, check if the trip ID exists");
-            return res.status(404).json({ error: "Trip not found" });
+        if (result.affectedRows > 0) {
+            // Respond with the updated trip
+            res.json({ message: 'Trip status updated successfully' });
+        } else {
+            res.status(404).json({ message: 'Trip not found' });
         }
-
-        // Emit event to notify users about the status change (ensure socket.io is configured)
-        const io = req.app.get('io');
-        if (io) {
-            io.emit('tripStatusUpdated', { tripId: id, status });
-        }
-
-        res.status(200).json({ message: `Trip status updated to ${status}`, tripId: id });
     } catch (error) {
-        console.error("Error updating trip status:", error);
-        res.status(500).json({ error: "Error updating trip status" });
+        console.error('Error executing query:', error);
+        res.status(500).json({ message: 'Internal server error' });
     }
 });
 
