@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const db = require("../config/config");
+const pool = require("../config/config");
 require("dotenv").config();
 
 const cors = require('cors');
@@ -13,25 +13,41 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 // Endpoint to fetch driver documents
+// Endpoint to fetch driver documents
 router.get('/getDriverDocuments', async (req, res) => {
   const { userId } = req.query;  // Get userId from query params
-  
+
+  console.log('Fetching driver documents for userId:', userId);
+
   if (!userId) {
-    return res.status(400).json({ error: 'User ID is required' });
+    return res.status(400).json({ message: 'User ID is required' });
   }
 
   // Query the database for driver documents
-  const query = `SELECT photo, id_copy, police_clearance, pdp, car_inspection FROM driver WHERE users_id = ?`;
-  db.query(query, [userId], (err, results) => {
-    if (err) return res.status(500).json({ error: err.message });
-    
-    // If no records are found, return false
-    if (results.length === 0) return res.status(404).json({ message: 'No records found', documentsFound: false });
-    
-    // If records are found, return the documents
-    res.json({ documentsFound: true, documents: results[0] });
-  });
+  const sql = `
+    SELECT photo, id_copy, police_clearance, pdp, car_inspection
+    FROM driver
+    WHERE users_id = ?
+  `;
+
+  try {
+    const startTime = Date.now();
+    const [rows] = await pool.query(sql, [userId]);
+    console.log(`Query executed in ${Date.now() - startTime} ms`);
+
+    // If no records are found, return a 404 status
+    if (rows.length === 0) {
+      return res.status(404).json({ message: 'No documents found for this user.' });
+    }
+
+    // If documents are found, return them
+    res.json({ documentsFound: true, documents: rows[0] });
+  } catch (error) {
+    console.error('Error executing query:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
 });
+
 
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
