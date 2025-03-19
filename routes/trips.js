@@ -245,30 +245,25 @@ router.get('/driverTrips', async (req, res) => {
 
 
 // Endpoint to update the trip status
-// Endpoint to update the trip status
 router.put('/trips/:tripId/status', async (req, res) => {
-    const { tripId } = req.params; // Get the trip ID from the URL
-    const { status, cancellation_reason, cancel_by, distance_traveled } = req.body; // Get the status and other details from the request body
+    const { tripId } = req.params;
+    const { status, cancellation_reason, cancel_by, distance_traveled } = req.body;
 
-    // Validate the status
     if (!status) {
         return res.status(400).json({ message: 'Status is required' });
     }
 
-    // Handle the trip status update based on the provided status
     try {
         let sql;
-        const params = [status, tripId]; // Basic params (status, tripId) for the query
+        const params = [status, tripId];
 
         if (status === 'started') {
-            // Start the trip: Set status to 'started' and update pickup time
             sql = `
                 UPDATE trips
                 SET statuses = ?, pickupTime = NOW()
                 WHERE id = ?
             `;
         } else if (status === 'ended') {
-            // End the trip: Set status to 'ended', update drop-off time, calculate duration and update distance traveled
             sql = `
                 UPDATE trips
                 SET statuses = ?, dropOffTime = NOW(), 
@@ -276,24 +271,35 @@ router.put('/trips/:tripId/status', async (req, res) => {
                     distance_traveled = ? 
                 WHERE id = ?
             `;
-            params.push(distance_traveled); // Add distance traveled to params
+            params.push(distance_traveled);
         } else if (status === 'canceled') {
-            // Cancel the trip: Set status to 'canceled', update cancellation reason and cancel_by (driver or customer)
             sql = `
                 UPDATE trips
-                SET statuses = ?, cancellation_reason = ?, cancel_by = ?
+                SET statuses = ?, cancellation_reason = ?, cancel_by = ? 
                 WHERE id = ?
             `;
-            params.push(cancellation_reason, cancel_by); // Add cancellation reason and cancel_by to params
+            params.push(cancellation_reason, cancel_by);
+        } else if (status === 'accepted') {
+            // If trip is accepted, update status to 'accepted'
+            sql = `
+                UPDATE trips
+                SET statuses = ?
+                WHERE id = ?
+            `;
+        } else if (status === 'declined') {
+            // If trip is declined, update status to 'declined'
+            sql = `
+                UPDATE trips
+                SET statuses = ?, cancellation_reason = ?, cancel_by = ? 
+                WHERE id = ?
+            `;
+            params.push(cancellation_reason, cancel_by);
         } else {
             return res.status(400).json({ message: 'Invalid status' });
         }
 
-        const startTime = Date.now(); // Log query start time
-        const [result] = await pool.query(sql, params); // Execute the query with the relevant parameters
-        console.log(`Query executed in ${Date.now() - startTime} ms`);
+        const [result] = await pool.query(sql, params);
 
-        // Check if any rows were affected (i.e., the trip exists and was updated)
         if (result.affectedRows > 0) {
             res.json({ message: 'Trip status updated successfully' });
         } else {
