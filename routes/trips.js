@@ -310,6 +310,38 @@ router.put('/trips/:tripId/status', async (req, res) => {
         res.status(500).json({ message: 'Internal server error' });
     }
 });
+// Endpoint to fetch the latest trip status for a specific user
+router.get('/trips/statuses/:userId', async (req, res) => {
+    const { user_id } = req.params;
+
+    if (!user_id) {
+        return res.status(400).json({ error: "User ID is required" });
+    }
+
+    const sql = `
+        SELECT id, statuses, currentDate
+        FROM trips
+        WHERE customerId = ?
+        ORDER BY currentDate DESC
+        LIMIT 1
+    `;
+
+    try {
+        const connection = await pool.getConnection();
+        const [rows] = await connection.execute(sql, [user_id, user_id]);
+        connection.release();
+
+        if (rows.length === 0) {
+            return res.status(404).json({ message: "No trips found for this user" });
+        }
+
+        return res.status(200).json({ latestTrip: rows[0] });
+    } catch (err) {
+        console.error("Error fetching latest trip status:", err);
+        return res.status(500).json({ error: "An error occurred while retrieving the latest trip status" });
+    }
+});
+
 
 
 
