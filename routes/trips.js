@@ -249,7 +249,7 @@ router.put('/trips/:tripId/status', async (req, res) => {
     const { tripId } = req.params;
     const { status, cancellation_reason, cancel_by, distance_traveled } = req.body;
 
-    console.log('Request Bodyrrrrrrrrrrrrrrrrrrrrr:', req.body);
+    console.log('Request Bodyrrrrrrrrrrrrrrrrrrrrr:', req.body,tripId);
     if (!status) {
         return res.status(400).json({ message: 'Status is required' });
     }
