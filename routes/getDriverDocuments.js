@@ -78,7 +78,7 @@ router.post('/driver_details', upload.fields([
   const { photo, id_copy, police_clearance, pdp, car_inspection, driver_license } = req.files;
 
   // Validate that required fields are provided
-  if (!users_id || !status || !state || !URL_payment || !online_time || !last_online_timestamp || 
+  if (!users_id || !status || !state||
       !photo || !id_copy || !police_clearance || !pdp || !car_inspection || !driver_license) {
     return res.status(400).json({ message: 'All fields are required' });
   }
