@@ -279,8 +279,10 @@ router.put('/trips/:tripId/status', async (req, res) => {
                 SET statuses = ?, cancellation_reason = ?, cancel_by = ? 
                 WHERE id = ?
             `;
-            params.push(cancellation_reason, cancel_by);
-        } else if (status === 'accepted') {
+            // Ensure you're pushing `tripId` at the end of the params
+            params.push(cancellation_reason, cancel_by, tripId);  // Added tripId
+        }
+         else if (status === 'accepted') {
             // If trip is accepted, update status to 'accepted'
             sql = `
                 UPDATE trips
