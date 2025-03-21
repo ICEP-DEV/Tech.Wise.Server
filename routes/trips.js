@@ -245,7 +245,7 @@ router.get('/driverTrips', async (req, res) => {
 
 
 // Endpoint to update the trip status
-router.put('/trips/status', async (req, res) => {
+router.put('/trips/:tripId/status', async (req, res) => {
     const { tripId, status, cancellation_reason, cancel_by, distance_traveled } = req.body;
 
     console.log('Updating trip status:', req.body);
