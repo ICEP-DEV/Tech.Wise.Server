@@ -248,8 +248,16 @@ router.get('/driverTrips', async (req, res) => {
 router.put('/trips/:tripId/status', async (req, res) => {
     const { tripId } = req.params;
     const { status, cancellation_reason, cancel_by, distance_traveled } = req.body;
+    // Before updating, check if the trip exists
+    const [tripExists] = await pool.query('SELECT * FROM trips WHERE id = ?', [tripId]);
 
-    console.log('Request Bodyrrrrrrrrrrrrrrrrrrrrr:', req.body,tripId);
+    if (!tripExists.length) {
+        return res.status(404).json({ message: 'Trip not found' });
+    }
+
+    // Proceed with updating if the trip exists
+
+    console.log('Request Bodyrrrrrrrrrrrrrrrrrrrrr:', req.body, tripId);
     if (!status) {
         return res.status(400).json({ message: 'Status is required' });
     }
@@ -282,7 +290,7 @@ router.put('/trips/:tripId/status', async (req, res) => {
             // Ensure you're pushing `tripId` at the end of the params
             params.push(cancellation_reason, cancel_by, tripId);  // Added tripId
         }
-         else if (status === 'accepted') {
+        else if (status === 'accepted') {
             // If trip is accepted, update status to 'accepted'
             sql = `
                 UPDATE trips
