@@ -333,14 +333,14 @@ router.get('/trips/statuses/:user_id', async (req, res) => {
     const sql = `
         SELECT id, statuses, currentDate
         FROM trips
-        WHERE customerId = ? or driverId = ?
+        WHERE customerId = ? OR driverId = ?
         ORDER BY currentDate DESC
         LIMIT 1
     `;
 
     try {
         const connection = await pool.getConnection();
-        const [rows] = await connection.execute(sql, [user_id]); // Fixed: Pass only one parameter
+        const [rows] = await connection.execute(sql, [user_id,user_id]); // Fixed: Pass only one parameter
         connection.release();
 
         if (rows.length === 0) {
