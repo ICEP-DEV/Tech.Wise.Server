@@ -340,7 +340,7 @@ router.get('/trips/statuses/:user_id', async (req, res) => {
 
     try {
         const connection = await pool.getConnection();
-        const [rows] = await connection.execute(sql, [user_id, user_id]);
+        const [rows] = await connection.execute(sql, [user_id]); // Fixed: Pass only one parameter
         connection.release();
 
         if (rows.length === 0) {
