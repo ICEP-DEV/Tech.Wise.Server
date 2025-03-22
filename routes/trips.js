@@ -333,7 +333,7 @@ router.get('/trips/statuses/:user_id', async (req, res) => {
     const sql = `
         SELECT id, statuses, currentDate
         FROM trips
-        WHERE customerId = ?
+        WHERE customerId = ? or driverId = ?
         ORDER BY currentDate DESC
         LIMIT 1
     `;
