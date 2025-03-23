@@ -12,7 +12,6 @@ const upload = multer({ storage: storage });
 
 //  and uploading documents to Google Cloud Storage
 router.post("/driver_details", upload.fields([
-  { name: "photo", maxCount: 1 },
   { name: "id_copy", maxCount: 1 }, // Match this field name to what frontend sends
   { name: "police_clearance", maxCount: 1 },
   { name: "pdpLicense", maxCount: 1 },
@@ -22,11 +21,11 @@ router.post("/driver_details", upload.fields([
 async (req, res) => {
   try {
     const { users_id, status, state, URL_payment, online_time, last_online_timestamp } = req.body;
-    const { photo, id_copy, police_clearance, pdpLicense, car_inspection, driver_license } = req.files;
+    const {  id_copy, police_clearance, pdpLicense, car_inspection, driver_license } = req.files;
 
     // Check if all required fields are present
     if (
-      !users_id || !status || !state || !photo || !id_copy || !police_clearance || 
+      !users_id || !status || !state|| !id_copy || !police_clearance || 
       !pdpLicense || !car_inspection || !driver_license
     ) {
       return res.status(400).json({ message: "All fields are required" });
@@ -53,7 +52,6 @@ async (req, res) => {
     };
 
     // Upload files and get their URLs
-    const photoUrl = await uploadFile(photo[0]);
     const idCopyUrl = await uploadFile(id_copy[0]);
     const policeClearanceUrl = await uploadFile(police_clearance[0]);
     const pdpLicenseUrl = await uploadFile(pdpLicense[0]);
@@ -63,13 +61,13 @@ async (req, res) => {
     // Insert into database
     const sql = `
       INSERT INTO driver 
-      (users_id, status, state, URL_payment, online_time, last_online_timestamp, photo, id_copy, police_clearance, pdpLicense, car_inspection, driver_license)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      (users_id, status, state, URL_payment, online_time, last_online_timestamp, id_copy, police_clearance, pdpLicense, car_inspection, driver_license)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
     await pool.query(sql, [
       users_id, status, state, URL_payment, online_time, last_online_timestamp,
-      photoUrl, idCopyUrl, policeClearanceUrl, pdpLicenseUrl, carInspectionUrl, driverLicenseUrl
+      idCopyUrl, policeClearanceUrl, pdpLicenseUrl, carInspectionUrl, driverLicenseUrl
     ]);
 
     res.json({ message: "Documents uploaded successfully" });
