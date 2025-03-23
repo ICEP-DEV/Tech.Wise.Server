@@ -26,7 +26,7 @@ async (req, res) => {
     console.log('Request files:', req.files);
 
     // Check if all required fields are present
-    if (!req.body.user_id || !req.files.id_copy) {
+    if (!req.body.users_id || !req.files.id_copy) {
       return res.status(400).send('All fields are required.');
     }    
 
