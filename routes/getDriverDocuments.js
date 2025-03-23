@@ -17,45 +17,24 @@ router.post(
     { name: "photo", maxCount: 1 },
     { name: "id_copy", maxCount: 1 },
     { name: "police_clearance", maxCount: 1 },
-    { name: "pdpLicense", maxCount: 1 },  // Update this line to match the field name in the form
+    { name: "pdpLicense", maxCount: 1 },  // Make sure this matches the frontend form field
     { name: "car_inspection", maxCount: 1 },
     { name: "driver_license", maxCount: 1 },
   ]),
   async (req, res) => {
     try {
-      const {
-        users_id,
-        status,
-        state,
-        URL_payment,
-        online_time,
-        last_online_timestamp,
-      } = req.body;
-      const {
-        photo,
-        id_copy,
-        police_clearance,
-        pdp,
-        car_inspection,
-        driver_license,
-      } = req.files;
+      const { users_id, status, state, URL_payment, online_time, last_online_timestamp } = req.body;
+      const { photo, id_copy, police_clearance, pdpLicense, car_inspection, driver_license } = req.files;
 
-      // Validate that required fields are provided
+      // Check if all required fields are present
       if (
-        !users_id ||
-        !status ||
-        !state ||
-        !photo ||
-        !id_copy ||
-        !police_clearance ||
-        !pdp ||
-        !car_inspection ||
-        !driver_license
+        !users_id || !status || !state || !photo || !id_copy || !police_clearance || 
+        !pdpLicense || !car_inspection || !driver_license
       ) {
         return res.status(400).json({ message: "All fields are required" });
       }
 
-      // Upload the files to Google Cloud Storage and get their URLs
+      // Helper function to upload file to Google Cloud Storage
       const uploadFile = async (file) => {
         const blob = bucket.file(file.originalname);
         const blobStream = blob.createWriteStream({
@@ -67,54 +46,42 @@ router.post(
         return new Promise((resolve, reject) => {
           blobStream.on("finish", () => {
             const fileUrl = `https://storage.googleapis.com/${process.env.GCS_BUCKET_NAME}/${blob.name}`;
-            resolve(fileUrl); // Resolve the file URL
+            resolve(fileUrl);
           });
 
-          blobStream.on("error", (err) => {
-            reject(err); // Reject the promise on error
-          });
-
-          blobStream.end(file.buffer); // Upload the file to GCS
+          blobStream.on("error", (err) => reject(err));
+          blobStream.end(file.buffer);
         });
       };
 
-      // Upload all files and get their URLs
+      // Upload files and get their URLs
       const photoUrl = await uploadFile(photo[0]);
       const idCopyUrl = await uploadFile(id_copy[0]);
       const policeClearanceUrl = await uploadFile(police_clearance[0]);
-      const pdpUrl = await uploadFile(pdp[0]);
+      const pdpLicenseUrl = await uploadFile(pdpLicense[0]);
       const carInspectionUrl = await uploadFile(car_inspection[0]);
       const driverLicenseUrl = await uploadFile(driver_license[0]);
 
-      // SQL query to insert the data into the database with the URLs of the uploaded files
+      // Insert into database
       const sql = `
         INSERT INTO driver 
-        (users_id, status, state, URL_payment, online_time, last_online_timestamp, photo, id_copy, police_clearance, pdp, car_inspection, driver_license)
+        (users_id, status, state, URL_payment, online_time, last_online_timestamp, photo, id_copy, police_clearance, pdpLicense, car_inspection, driver_license)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `;
 
       await pool.query(sql, [
-        users_id,
-        status,
-        state,
-        URL_payment,
-        online_time,
-        last_online_timestamp,
-        photoUrl,
-        idCopyUrl,
-        policeClearanceUrl,
-        pdpUrl,
-        carInspectionUrl,
-        driverLicenseUrl,
+        users_id, status, state, URL_payment, online_time, last_online_timestamp,
+        photoUrl, idCopyUrl, policeClearanceUrl, pdpLicenseUrl, carInspectionUrl, driverLicenseUrl
       ]);
 
-      res.json({ message: "Driver documents uploaded successfully." });
+      res.json({ message: "Documents uploaded successfully" });
     } catch (error) {
-      console.error("Error executing query or file upload:", error);
-      res.status(500).json({ message: "Internal server error while saving driver documents." });
+      console.error("Error during document upload:", error);
+      res.status(500).json({ message: "Server error while uploading documents" });
     }
   }
 );
+;
 
 // Endpoint to fetch driver details by user ID
 router.get('/more_details/user', async (req, res) => {
