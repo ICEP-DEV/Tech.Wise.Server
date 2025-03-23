@@ -26,12 +26,9 @@ async (req, res) => {
     console.log('Request files:', req.files);
 
     // Check if all required fields are present
-    if (
-      !users_id || !status || !state|| !id_copy || !police_clearance || 
-      !pdpLicense || !car_inspection || !driver_license
-    ) {
-      return res.status(400).json({ message: "All fields are required" });
-    }
+    if (!req.body.user_id || !req.files.id_copy) {
+      return res.status(400).send('All fields are required.');
+    }    
 
     // Helper function to upload file to Google Cloud Storage
     const uploadFile = async (file) => {
