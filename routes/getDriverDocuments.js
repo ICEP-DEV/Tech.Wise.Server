@@ -10,10 +10,8 @@ const path = require("path");
 const storage = multer.memoryStorage(); // Store files in memory
 const upload = multer({ storage: storage });
 
-// Inserting driver details and uploading documents to Google Cloud Storage
-router.post(
-  "/driver_details",
-  upload.fields([
+//  and uploading documents to Google Cloud Storage
+router.post("/driver_details",upload.fields([
     { name: "photo", maxCount: 1 },
     { name: "id_copy", maxCount: 1 },
     { name: "police_clearance", maxCount: 1 },
