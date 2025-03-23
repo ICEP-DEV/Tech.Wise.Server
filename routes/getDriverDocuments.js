@@ -17,7 +17,7 @@ router.post(
     { name: "photo", maxCount: 1 },
     { name: "id_copy", maxCount: 1 },
     { name: "police_clearance", maxCount: 1 },
-    { name: "pdp", maxCount: 1 },
+    { name: "pdpLicense", maxCount: 1 },  // Update this line to match the field name in the form
     { name: "car_inspection", maxCount: 1 },
     { name: "driver_license", maxCount: 1 },
   ]),
