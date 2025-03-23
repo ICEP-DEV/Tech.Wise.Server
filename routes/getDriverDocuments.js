@@ -21,7 +21,9 @@ router.post("/driver_details", upload.fields([
 async (req, res) => {
   try {
     const { users_id, status, state, URL_payment, online_time, last_online_timestamp } = req.body;
+    console.log('Request body:', req.body);
     const {  id_copy, police_clearance, pdpLicense, car_inspection, driver_license } = req.files;
+    console.log('Request files:', req.files);
 
     // Check if all required fields are present
     if (
