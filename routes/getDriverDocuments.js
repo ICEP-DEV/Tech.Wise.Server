@@ -32,23 +32,32 @@ async (req, res) => {
 
     // Helper function to upload file to Google Cloud Storage
     const uploadFile = async (file) => {
-      const blob = bucket.file(file.originalname);
-      const blobStream = blob.createWriteStream({
-        resumable: false,
-        gzip: true,
-        contentType: file.mimetype,
-      });
-
-      return new Promise((resolve, reject) => {
-        blobStream.on("finish", () => {
-          const fileUrl = `https://storage.googleapis.com/${process.env.GCS_BUCKET_NAME}/${blob.name}`;
-          resolve(fileUrl);
+      try {
+        const blob = bucket.file(file.originalname);
+        const blobStream = blob.createWriteStream({
+          resumable: false,
+          gzip: true,
+          contentType: file.mimetype,
         });
-
-        blobStream.on("error", (err) => reject(err));
-        blobStream.end(file.buffer);
-      });
+    
+        return new Promise((resolve, reject) => {
+          blobStream.on("finish", () => {
+            const fileUrl = `https://storage.googleapis.com/${process.env.GCS_BUCKET_NAME}/${blob.name}`;
+            resolve(fileUrl);
+          });
+    
+          blobStream.on("error", (err) => {
+            console.error("Blob stream error:", err);
+            reject(err);
+          });
+          blobStream.end(file.buffer);
+        });
+      } catch (error) {
+        console.error("Error during file upload:", error);
+        throw new Error("Error during file upload");
+      }
     };
+    
 
     // Upload files and get their URLs
     const idCopyUrl = await uploadFile(id_copy[0]);
