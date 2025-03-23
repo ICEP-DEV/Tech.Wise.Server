@@ -11,75 +11,74 @@ const storage = multer.memoryStorage(); // Store files in memory
 const upload = multer({ storage: storage });
 
 //  and uploading documents to Google Cloud Storage
-router.post("/driver_details",upload.fields([
-    { name: "photo", maxCount: 1 },
-    { name: "id_copy", maxCount: 1 },
-    { name: "police_clearance", maxCount: 1 },
-    { name: "pdpLicense", maxCount: 1 },  // Make sure this matches the frontend form field
-    { name: "car_inspection", maxCount: 1 },
-    { name: "driver_license", maxCount: 1 },
-  ]),
-  async (req, res) => {
-    try {
-      const { users_id, status, state, URL_payment, online_time, last_online_timestamp } = req.body;
-      const { photo, id_copy, police_clearance, pdpLicense, car_inspection, driver_license } = req.files;
+router.post("/driver_details", upload.fields([
+  { name: "photo", maxCount: 1 },
+  { name: "id_copy", maxCount: 1 }, // Match this field name to what frontend sends
+  { name: "police_clearance", maxCount: 1 },
+  { name: "pdpLicense", maxCount: 1 },
+  { name: "car_inspection", maxCount: 1 },
+  { name: "driver_license", maxCount: 1 },
+]),
+async (req, res) => {
+  try {
+    const { users_id, status, state, URL_payment, online_time, last_online_timestamp } = req.body;
+    const { photo, id_copy, police_clearance, pdpLicense, car_inspection, driver_license } = req.files;
 
-      // Check if all required fields are present
-      if (
-        !users_id || !status || !state || !photo || !id_copy || !police_clearance || 
-        !pdpLicense || !car_inspection || !driver_license
-      ) {
-        return res.status(400).json({ message: "All fields are required" });
-      }
-
-      // Helper function to upload file to Google Cloud Storage
-      const uploadFile = async (file) => {
-        const blob = bucket.file(file.originalname);
-        const blobStream = blob.createWriteStream({
-          resumable: false,
-          gzip: true,
-          contentType: file.mimetype,
-        });
-
-        return new Promise((resolve, reject) => {
-          blobStream.on("finish", () => {
-            const fileUrl = `https://storage.googleapis.com/${process.env.GCS_BUCKET_NAME}/${blob.name}`;
-            resolve(fileUrl);
-          });
-
-          blobStream.on("error", (err) => reject(err));
-          blobStream.end(file.buffer);
-        });
-      };
-
-      // Upload files and get their URLs
-      const photoUrl = await uploadFile(photo[0]);
-      const idCopyUrl = await uploadFile(id_copy[0]);
-      const policeClearanceUrl = await uploadFile(police_clearance[0]);
-      const pdpLicenseUrl = await uploadFile(pdpLicense[0]);
-      const carInspectionUrl = await uploadFile(car_inspection[0]);
-      const driverLicenseUrl = await uploadFile(driver_license[0]);
-
-      // Insert into database
-      const sql = `
-        INSERT INTO driver 
-        (users_id, status, state, URL_payment, online_time, last_online_timestamp, photo, id_copy, police_clearance, pdpLicense, car_inspection, driver_license)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `;
-
-      await pool.query(sql, [
-        users_id, status, state, URL_payment, online_time, last_online_timestamp,
-        photoUrl, idCopyUrl, policeClearanceUrl, pdpLicenseUrl, carInspectionUrl, driverLicenseUrl
-      ]);
-
-      res.json({ message: "Documents uploaded successfully" });
-    } catch (error) {
-      console.error("Error during document upload:", error);
-      res.status(500).json({ message: "Server error while uploading documents" });
+    // Check if all required fields are present
+    if (
+      !users_id || !status || !state || !photo || !id_copy || !police_clearance || 
+      !pdpLicense || !car_inspection || !driver_license
+    ) {
+      return res.status(400).json({ message: "All fields are required" });
     }
+
+    // Helper function to upload file to Google Cloud Storage
+    const uploadFile = async (file) => {
+      const blob = bucket.file(file.originalname);
+      const blobStream = blob.createWriteStream({
+        resumable: false,
+        gzip: true,
+        contentType: file.mimetype,
+      });
+
+      return new Promise((resolve, reject) => {
+        blobStream.on("finish", () => {
+          const fileUrl = `https://storage.googleapis.com/${process.env.GCS_BUCKET_NAME}/${blob.name}`;
+          resolve(fileUrl);
+        });
+
+        blobStream.on("error", (err) => reject(err));
+        blobStream.end(file.buffer);
+      });
+    };
+
+    // Upload files and get their URLs
+    const photoUrl = await uploadFile(photo[0]);
+    const idCopyUrl = await uploadFile(id_copy[0]);
+    const policeClearanceUrl = await uploadFile(police_clearance[0]);
+    const pdpLicenseUrl = await uploadFile(pdpLicense[0]);
+    const carInspectionUrl = await uploadFile(car_inspection[0]);
+    const driverLicenseUrl = await uploadFile(driver_license[0]);
+
+    // Insert into database
+    const sql = `
+      INSERT INTO driver 
+      (users_id, status, state, URL_payment, online_time, last_online_timestamp, photo, id_copy, police_clearance, pdpLicense, car_inspection, driver_license)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `;
+
+    await pool.query(sql, [
+      users_id, status, state, URL_payment, online_time, last_online_timestamp,
+      photoUrl, idCopyUrl, policeClearanceUrl, pdpLicenseUrl, carInspectionUrl, driverLicenseUrl
+    ]);
+
+    res.json({ message: "Documents uploaded successfully" });
+  } catch (error) {
+    console.error("Error during document upload:", error);
+    res.status(500).json({ message: "Server error while uploading documents" });
   }
+}
 );
-;
 
 // Endpoint to fetch driver details by user ID
 router.get('/more_details/user', async (req, res) => {
