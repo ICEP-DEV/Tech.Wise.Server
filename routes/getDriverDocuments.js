@@ -2,116 +2,120 @@ const express = require("express");
 const router = express.Router();
 const pool = require("../config/config");
 require("dotenv").config();
+const multer = require("multer");
+const { bucket } = require("../config/googleCloudConfig"); // Import Google Cloud Storage bucket
+const path = require("path");
 
-const cors = require('cors');
-const multer = require('multer');
-const path = require('path');
-const mysql = require('mysql');
+// Multer setup for file handling
+const storage = multer.memoryStorage(); // Store files in memory
+const upload = multer({ storage: storage });
 
-const app = express();
+// Inserting driver details and uploading documents to Google Cloud Storage
+router.post(
+  "/driver_details",
+  upload.fields([
+    { name: "photo", maxCount: 1 },
+    { name: "id_copy", maxCount: 1 },
+    { name: "police_clearance", maxCount: 1 },
+    { name: "pdp", maxCount: 1 },
+    { name: "car_inspection", maxCount: 1 },
+    { name: "driver_license", maxCount: 1 },
+  ]),
+  async (req, res) => {
+    try {
+      const {
+        users_id,
+        status,
+        state,
+        URL_payment,
+        online_time,
+        last_online_timestamp,
+      } = req.body;
+      const {
+        photo,
+        id_copy,
+        police_clearance,
+        pdp,
+        car_inspection,
+        driver_license,
+      } = req.files;
 
-app.use(cors());
-app.use(express.json());
-// Endpoint to fetch driver documents
-// Endpoint to fetch driver documents
-router.get('/getDriverDocuments', async (req, res) => {
-  const { userId } = req.query;  // Get userId from query params
+      // Validate that required fields are provided
+      if (
+        !users_id ||
+        !status ||
+        !state ||
+        !photo ||
+        !id_copy ||
+        !police_clearance ||
+        !pdp ||
+        !car_inspection ||
+        !driver_license
+      ) {
+        return res.status(400).json({ message: "All fields are required" });
+      }
 
-  console.log('Fetching driver documents for userId:', userId);
+      // Upload the files to Google Cloud Storage and get their URLs
+      const uploadFile = async (file) => {
+        const blob = bucket.file(file.originalname);
+        const blobStream = blob.createWriteStream({
+          resumable: false,
+          gzip: true,
+          contentType: file.mimetype,
+        });
 
-  if (!userId) {
-    return res.status(400).json({ message: 'User ID is required' });
-  }
+        return new Promise((resolve, reject) => {
+          blobStream.on("finish", () => {
+            const fileUrl = `https://storage.googleapis.com/${process.env.GCS_BUCKET_NAME}/${blob.name}`;
+            resolve(fileUrl); // Resolve the file URL
+          });
 
-  // Query the database for driver documents
-  const sql = `
-    SELECT photo, id_copy, police_clearance, pdp, car_inspection
-    FROM driver
-    WHERE users_id = ?
-  `;
+          blobStream.on("error", (err) => {
+            reject(err); // Reject the promise on error
+          });
 
-  try {
-    const startTime = Date.now();
-    const [rows] = await pool.query(sql, [userId]);
-    console.log(`Query executed in ${Date.now() - startTime} ms`);
+          blobStream.end(file.buffer); // Upload the file to GCS
+        });
+      };
 
-    // If no records are found, return a 404 status
-    if (rows.length === 0) {
-      return res.status(404).json({ message: 'No documents found for this user.' });
+      // Upload all files and get their URLs
+      const photoUrl = await uploadFile(photo[0]);
+      const idCopyUrl = await uploadFile(id_copy[0]);
+      const policeClearanceUrl = await uploadFile(police_clearance[0]);
+      const pdpUrl = await uploadFile(pdp[0]);
+      const carInspectionUrl = await uploadFile(car_inspection[0]);
+      const driverLicenseUrl = await uploadFile(driver_license[0]);
+
+      // SQL query to insert the data into the database with the URLs of the uploaded files
+      const sql = `
+        INSERT INTO driver 
+        (users_id, status, state, URL_payment, online_time, last_online_timestamp, photo, id_copy, police_clearance, pdp, car_inspection, driver_license)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `;
+
+      await pool.query(sql, [
+        users_id,
+        status,
+        state,
+        URL_payment,
+        online_time,
+        last_online_timestamp,
+        photoUrl,
+        idCopyUrl,
+        policeClearanceUrl,
+        pdpUrl,
+        carInspectionUrl,
+        driverLicenseUrl,
+      ]);
+
+      res.json({ message: "Driver documents uploaded successfully." });
+    } catch (error) {
+      console.error("Error executing query or file upload:", error);
+      res.status(500).json({ message: "Internal server error while saving driver documents." });
     }
-
-    // If documents are found, return them
-    res.json({ documentsFound: true, documents: rows[0] });
-  } catch (error) {
-    console.error('Error executing query:', error);
-    res.status(500).json({ message: 'Internal server error' });
   }
-});
+);
 
-
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-      return cb(null, './public/documents') // Specify the directory where uploaded files will be stored
-  },
-  filename: function (req, file, cb) {
-      return cb(null, `${file.originalname}`) // Specify the name of the uploaded file
-  }
-});
-
-const upload = multer({ storage });
-
-
-//inserting driver details
-router.post('/driver_details', upload.fields([
-  { name: 'photo', maxCount: 1 },
-  { name: 'id_copy', maxCount: 1 },
-  { name: 'police_clearance', maxCount: 1 },
-  { name: 'pdp', maxCount: 1 },
-  { name: 'car_inspection', maxCount: 1 },
-  { name: 'driver_license', maxCount: 1 }
-]), async (req, res) => {
-  try {
-    console.log("Request Body:", req.body);
-    const { users_id, status, state, URL_payment, online_time, last_online_timestamp } = req.body;
-    const { photo, id_copy, police_clearance, pdp, car_inspection, driver_license } = req.files;
-
-    // Validate that required fields are provided
-    if (!users_id || !status || !state || !photo || !id_copy || !police_clearance || !pdp || !car_inspection || !driver_license) {
-      return res.status(400).json({ message: 'All fields are required' });
-    }
-
-    // SQL query to insert the data into the database
-    const sql = `
-      INSERT INTO driver 
-      (users_id, status, state, URL_payment, online_time, last_online_timestamp, photo, id_copy, police_clearance, pdp, car_inspection, driver_license)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `;
-
-    await pool.query(sql, [
-      users_id,
-      status,
-      state,
-      URL_payment,
-      online_time,
-      last_online_timestamp,
-      photo[0].filename,
-      id_copy[0].filename,
-      police_clearance[0].filename,
-      pdp[0].filename,
-      car_inspection[0].filename,
-      driver_license[0].filename
-    ]);
-
-    res.json({ message: 'Driver documents uploaded successfully.' });
-  } catch (error) {
-    console.error('Error executing query or file upload:', error);
-    res.status(500).json({ message: 'Internal server error while saving driver documents.' });
-  }
-});
-
-
-// getting driver details
-// Endpoint to fetch driver details by user ID
 // Endpoint to fetch driver details by user ID
 router.get('/more_details/user', async (req, res) => {
   const { userId } = req.query;  // Get userId from query params
