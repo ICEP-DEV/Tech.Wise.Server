@@ -134,7 +134,7 @@ router.post("/driver_details", async (req, res) => {
     // Handle optional fields (URL_payment and online_time can be null)
     const sql = `
       INSERT INTO driver 
-      (user_id, status, state, URL_payment, online_time, last_online_timestamp, id_copy, police_clearance, pdpLicense, car_inspection, driver_license)
+      (users_id, status, state, URL_payment, online_time, last_online_timestamp, id_copy, police_clearance, pdpLicense, car_inspection, driver_license)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
