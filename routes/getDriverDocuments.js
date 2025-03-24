@@ -118,29 +118,16 @@ const uploadFile = async (file) => {
 };
 
 // Route to upload driver details and documents
-router.post("/driver_details", upload.fields([
-  { name: "id_copy", maxCount: 1 }, 
-  { name: "police_clearance", maxCount: 1 },
-  { name: "pdpLicense", maxCount: 1 },
-  { name: "car_inspection", maxCount: 1 },
-  { name: "driver_license", maxCount: 1 },
-]), async (req, res) => {
+router.post("/driver_details", async (req, res) => {
   try {
-    const { users_id, status, state, URL_payment, online_time, last_online_timestamp } = req.body;
-    const { id_copy, police_clearance, pdpLicense, car_inspection, driver_license } = req.files;
+    const { users_id, status, state, URL_payment, online_time, last_online_timestamp, 
+      id_copy, police_clearance, pdpLicense, car_inspection, driver_license } = req.body;
 
-    // Validate that all required fields and files are provided
+    // Validate that all required fields are provided
     if (!users_id || !status || !state || !online_time || !last_online_timestamp || 
         !id_copy || !police_clearance || !pdpLicense || !car_inspection || !driver_license) {
       return res.status(400).send('All fields are required.');
     }
-
-    // Upload files to Firebase storage or cloud storage and get their URLs
-    const idCopyUrl = await uploadFile(id_copy[0]);
-    const policeClearanceUrl = await uploadFile(police_clearance[0]);
-    const pdpLicenseUrl = await uploadFile(pdpLicense[0]);
-    const carInspectionUrl = await uploadFile(car_inspection[0]);
-    const driverLicenseUrl = await uploadFile(driver_license[0]);
 
     // Insert the document URLs and other relevant data into the MySQL database
     const sql = `
@@ -152,14 +139,14 @@ router.post("/driver_details", upload.fields([
     // Insert the data into the MySQL database
     await pool.query(sql, [
       users_id, status, state, URL_payment, online_time, last_online_timestamp,
-      idCopyUrl, policeClearanceUrl, pdpLicenseUrl, carInspectionUrl, driverLicenseUrl
+      id_copy, police_clearance, pdpLicense, car_inspection, driver_license
     ]);
 
     // Send success response
-    res.json({ message: "Documents uploaded and driver details saved successfully" });
+    res.json({ message: "Driver details saved successfully" });
   } catch (error) {
-    console.error("Error during document upload:", error);
-    res.status(500).json({ message: "Server error while uploading documents and saving driver details" });
+    console.error("Error while saving driver details:", error);
+    res.status(500).json({ message: "Server error while saving driver details" });
   }
 });
 
