@@ -120,14 +120,14 @@ const uploadFile = async (file) => {
 // Route to upload driver details and documents
 router.post("/driver_details", async (req, res) => {
   try {
-    const { user_id, status, state, URL_payment, online_time, last_online_timestamp, 
-      id_copy_url, police_clearance_url, pdpLicense_url, car_inspection_url, driver_license_url } = req.body;
-    
-    console.log('Request body:', req.body);
+    const { users_id, status, state, URL_payment, online_time, last_online_timestamp, 
+      id_copy, police_clearance, pdpLicense, car_inspection, driver_license } = req.body;
+      console.log('Request body:', req.body);
+      
 
     // Validate that all required fields are provided
-    if (!user_id || !status || !state || !online_time || !last_online_timestamp || 
-        !id_copy_url || !police_clearance_url || !pdpLicense_url || !car_inspection_url || !driver_license_url) {
+    if (!users_id || !status || !state || !online_time || !last_online_timestamp || 
+        !id_copy || !police_clearance || !pdpLicense || !car_inspection || !driver_license) {
       return res.status(400).send('All fields are required.');
     }
 
@@ -140,8 +140,8 @@ router.post("/driver_details", async (req, res) => {
 
     // Insert the data into the MySQL database
     await pool.query(sql, [
-      user_id, status, state, URL_payment, online_time, last_online_timestamp,
-      id_copy_url, police_clearance_url, pdpLicense_url, car_inspection_url, driver_license_url
+      users_id, status, state, URL_payment, online_time, last_online_timestamp,
+      id_copy, police_clearance, pdpLicense, car_inspection, driver_license
     ]);
 
     // Send success response
