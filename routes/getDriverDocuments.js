@@ -122,6 +122,8 @@ router.post("/driver_details", async (req, res) => {
   try {
     const { users_id, status, state, URL_payment, online_time, last_online_timestamp, 
       id_copy, police_clearance, pdpLicense, car_inspection, driver_license } = req.body;
+      console.log('Request body:', req.body);
+      
 
     // Validate that all required fields are provided
     if (!users_id || !status || !state || !online_time || !last_online_timestamp || 
