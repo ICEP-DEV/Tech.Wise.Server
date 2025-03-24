@@ -129,33 +129,37 @@ router.post("/driver_details", upload.fields([
     const { users_id, status, state, URL_payment, online_time, last_online_timestamp } = req.body;
     const { id_copy, police_clearance, pdpLicense, car_inspection, driver_license } = req.files;
 
-    if (!users_id || !id_copy || !police_clearance || !pdpLicense || !car_inspection || !driver_license) {
+    // Validate that all required fields and files are provided
+    if (!users_id || !status || !state || !online_time || !last_online_timestamp || 
+        !id_copy || !police_clearance || !pdpLicense || !car_inspection || !driver_license) {
       return res.status(400).send('All fields are required.');
     }
 
-    // Upload files and get their URLs
+    // Upload files to Firebase storage or cloud storage and get their URLs
     const idCopyUrl = await uploadFile(id_copy[0]);
     const policeClearanceUrl = await uploadFile(police_clearance[0]);
     const pdpLicenseUrl = await uploadFile(pdpLicense[0]);
     const carInspectionUrl = await uploadFile(car_inspection[0]);
     const driverLicenseUrl = await uploadFile(driver_license[0]);
 
-    // Insert document URLs into the database
+    // Insert the document URLs and other relevant data into the MySQL database
     const sql = `
       INSERT INTO driver 
       (users_id, status, state, URL_payment, online_time, last_online_timestamp, id_copy, police_clearance, pdpLicense, car_inspection, driver_license)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
+    // Insert the data into the MySQL database
     await pool.query(sql, [
       users_id, status, state, URL_payment, online_time, last_online_timestamp,
       idCopyUrl, policeClearanceUrl, pdpLicenseUrl, carInspectionUrl, driverLicenseUrl
     ]);
 
-    res.json({ message: "Documents uploaded successfully" });
+    // Send success response
+    res.json({ message: "Documents uploaded and driver details saved successfully" });
   } catch (error) {
     console.error("Error during document upload:", error);
-    res.status(500).json({ message: "Server error while uploading documents" });
+    res.status(500).json({ message: "Server error while uploading documents and saving driver details" });
   }
 });
 
