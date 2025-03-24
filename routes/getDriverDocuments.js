@@ -122,27 +122,39 @@ router.post("/driver_details", async (req, res) => {
   try {
     const { user_id, status, state, URL_payment, online_time, last_online_timestamp, 
       id_copy, police_clearance, pdpLicense, car_inspection, driver_license } = req.body;
-      console.log('Request body:', req.body);
-      
+    
+    console.log('Request body:', req.body);
 
-    // Validate that all required fields are provided
-    if (!user_id || !status || !state || !online_time || !last_online_timestamp || 
+    // Validate that required fields are provided
+    if (!user_id || !status || !state || !last_online_timestamp || 
         !id_copy || !police_clearance || !pdpLicense || !car_inspection || !driver_license) {
-      return res.status(400).send('All fields are required.');
+      return res.status(400).send('All required fields must be provided.');
     }
 
-    // Insert the document URLs and other relevant data into the MySQL database
+    // Handle optional fields (URL_payment and online_time can be null)
     const sql = `
       INSERT INTO driver 
       (user_id, status, state, URL_payment, online_time, last_online_timestamp, id_copy, police_clearance, pdpLicense, car_inspection, driver_license)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
+    // Prepare the data for insertion (handle nulls properly)
+    const queryData = [
+      user_id, 
+      status, 
+      state, 
+      URL_payment || null, // If URL_payment is null, set it to null
+      online_time || null, // If online_time is null, set it to null
+      last_online_timestamp,
+      id_copy, 
+      police_clearance, 
+      pdpLicense, 
+      car_inspection, 
+      driver_license
+    ];
+
     // Insert the data into the MySQL database
-    await pool.query(sql, [
-      user_id, status, state, URL_payment, online_time, last_online_timestamp,
-      id_copy, police_clearance, pdpLicense, car_inspection, driver_license
-    ]);
+    await pool.query(sql, queryData);
 
     // Send success response
     res.json({ message: "Driver details saved successfully" });
