@@ -120,13 +120,13 @@ const uploadFile = async (file) => {
 // Route to upload driver details and documents
 router.post("/driver_details", async (req, res) => {
   try {
-    const { users_id, status, state, URL_payment, online_time, last_online_timestamp, 
+    const { user_id, status, state, URL_payment, online_time, last_online_timestamp, 
       id_copy, police_clearance, pdpLicense, car_inspection, driver_license } = req.body;
       console.log('Request body:', req.body);
       
 
     // Validate that all required fields are provided
-    if (!users_id || !status || !state || !online_time || !last_online_timestamp || 
+    if (!user_id || !status || !state || !online_time || !last_online_timestamp || 
         !id_copy || !police_clearance || !pdpLicense || !car_inspection || !driver_license) {
       return res.status(400).send('All fields are required.');
     }
@@ -134,13 +134,13 @@ router.post("/driver_details", async (req, res) => {
     // Insert the document URLs and other relevant data into the MySQL database
     const sql = `
       INSERT INTO driver 
-      (users_id, status, state, URL_payment, online_time, last_online_timestamp, id_copy, police_clearance, pdpLicense, car_inspection, driver_license)
+      (user_id, status, state, URL_payment, online_time, last_online_timestamp, id_copy, police_clearance, pdpLicense, car_inspection, driver_license)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
     // Insert the data into the MySQL database
     await pool.query(sql, [
-      users_id, status, state, URL_payment, online_time, last_online_timestamp,
+      user_id, status, state, URL_payment, online_time, last_online_timestamp,
       id_copy, police_clearance, pdpLicense, car_inspection, driver_license
     ]);
 
