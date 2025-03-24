@@ -122,7 +122,7 @@ router.post("/driver_details", async (req, res) => {
   try {
     const { user_id, status, state, URL_payment, online_time, last_online_timestamp, 
       id_copy, police_clearance, pdpLicense, car_inspection, driver_license } = req.body;
-    
+
     console.log('Request body:', req.body);
 
     // Validate that required fields are provided
@@ -131,33 +131,53 @@ router.post("/driver_details", async (req, res) => {
       return res.status(400).send('All required fields must be provided.');
     }
 
-    // Handle optional fields (URL_payment and online_time can be null)
-    const sql = `
-      INSERT INTO driver 
-      (users_id, status, state, URL_payment, online_time, last_online_timestamp, id_copy, police_clearance, pdp, car_inspection, driver_license)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `;
+    // Check if the driver details for the given user_id already exist
+    const checkQuery = `SELECT * FROM driver WHERE users_id = ?`;
+    const [existingDriver] = await pool.query(checkQuery, [user_id]);
 
-    // Prepare the data for insertion (handle nulls properly)
+    // Prepare the data for either update or insert
     const queryData = [
-      user_id, 
       status, 
       state, 
-      URL_payment || null, // If URL_payment is null, set it to null
-      online_time || null, // If online_time is null, set it to null
+      URL_payment || null, 
+      online_time || null, 
       last_online_timestamp,
       id_copy, 
       police_clearance, 
       pdpLicense, 
       car_inspection, 
-      driver_license
+      driver_license,
+      user_id // We need the user_id to identify the record in case of an update
     ];
 
-    // Insert the data into the MySQL database
-    await pool.query(sql, queryData);
-
-    // Send success response
-    res.json({ message: "Driver details saved successfully" });
+    if (existingDriver.length > 0) {
+      // If the driver data already exists, update the record
+      const updateQuery = `
+        UPDATE driver SET 
+          status = ?, 
+          state = ?, 
+          URL_payment = ?, 
+          online_time = ?, 
+          last_online_timestamp = ?, 
+          id_copy = ?, 
+          police_clearance = ?, 
+          pdp = ?, 
+          car_inspection = ?, 
+          driver_license = ? 
+        WHERE users_id = ?
+      `;
+      await pool.query(updateQuery, queryData);
+      res.json({ message: "Driver details updated successfully" });
+    } else {
+      // If the driver data does not exist, insert a new record
+      const insertQuery = `
+        INSERT INTO driver 
+        (users_id, status, state, URL_payment, online_time, last_online_timestamp, id_copy, police_clearance, pdp, car_inspection, driver_license)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `;
+      await pool.query(insertQuery, queryData);
+      res.json({ message: "Driver details saved successfully" });
+    }
   } catch (error) {
     console.error("Error while saving driver details:", error);
     res.status(500).json({ message: "Server error while saving driver details" });
