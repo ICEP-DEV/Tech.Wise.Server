@@ -266,7 +266,7 @@ router.put('/trips/:tripId/status', async (req, res) => {
         let sql;
         const params = [status, tripId];
 
-        if (status === 'started') {
+        if (status === 'on-going') {
             sql = `
                 UPDATE trips
                 SET statuses = ?, pickupTime = NOW()
