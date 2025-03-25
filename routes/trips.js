@@ -331,7 +331,24 @@ router.get('/trips/statuses/:user_id', async (req, res) => {
     }
 });
 
+//endpoint to delete chat messages
+router.post("/messages", async (req, res) => {
+    const { senderId, receiverId, message } = req.body;
 
+    if (!senderId || !receiverId || !message) {
+        return res.status(400).json({ message: "Missing required fields" });
+    }
+
+    try {
+        const sql = `INSERT INTO messages (sender_id, receiver_id, message) VALUES (?, ?, ?)`;
+        await pool.query(sql, [senderId, receiverId, message]);
+
+        res.status(201).json({ message: "Message stored successfully" });
+    } catch (error) {
+        console.error("Error saving message:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+});
 
 
 
