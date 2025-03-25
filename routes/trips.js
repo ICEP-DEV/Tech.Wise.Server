@@ -272,7 +272,7 @@ router.put('/trips/:tripId/status', async (req, res) => {
                 SET statuses = ?, pickupTime = NOW()
                 WHERE id = ?
             `;
-        } else if (status === 'ended') {
+        } else if (status === 'completed') {
             sql = `
                 UPDATE trips
                 SET statuses = ?, dropOffTime = NOW(), 
