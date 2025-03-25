@@ -252,7 +252,6 @@ router.put('/trips/:tripId/status', async (req, res) => {
     console.log('Received tripId:', tripId);
     console.log('Request Body:', req.body);
 
-    // Check if the trip exists before updating
     const [tripExists] = await pool.query('SELECT * FROM trips WHERE id = ?', [tripId]);
     if (!tripExists.length) {
         return res.status(404).json({ message: 'Trip not found' });
@@ -272,14 +271,11 @@ router.put('/trips/:tripId/status', async (req, res) => {
             sql = `
                 UPDATE trips
                 SET statuses = ?, dropOffTime = NOW(), 
-                    duration_minutes = CASE 
-                        WHEN pickupTime IS NOT NULL THEN TIMESTAMPDIFF(MINUTE, pickupTime, NOW()) 
-                        ELSE NULL 
-                    END, 
+                    duration_minutes = TIMESTAMPDIFF(MINUTE, pickupTime, NOW()), 
                     distance_traveled = ? 
                 WHERE id = ?
             `;
-            params.push(distance_traveled, tripId);
+            params.splice(1, 0, distance_traveled); // Ensure correct order
         } else if (status === 'canceled') {
             sql = `UPDATE trips SET statuses = ?, cancellation_reason = ?, cancel_by = ? WHERE id = ?`;
             params.push(cancellation_reason, cancel_by, tripId);
