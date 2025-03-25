@@ -247,17 +247,17 @@ router.get('/driverTrips', async (req, res) => {
 // Endpoint to update the trip status
 router.put('/trips/:tripId/status', async (req, res) => {
     const { tripId } = req.params;
-    const { status, cancellation_reason, cancel_by, distance_traveled, duration_minutes } = req.body;
-    // Before updating, check if the trip exists
-    const [tripExists] = await pool.query('SELECT * FROM trips WHERE id = ?', [tripId]);
+    const { status, cancellation_reason, cancel_by, distance_traveled } = req.body;
 
+    console.log('Received tripId:', tripId);
+    console.log('Request Body:', req.body);
+
+    // Check if the trip exists before updating
+    const [tripExists] = await pool.query('SELECT * FROM trips WHERE id = ?', [tripId]);
     if (!tripExists.length) {
         return res.status(404).json({ message: 'Trip not found' });
     }
 
-    // Proceed with updating if the trip exists
-
-    console.log('Request Bodyrrrrrrrrrrrrrrrrrrrrr:', req.body, tripId);
     if (!status) {
         return res.status(400).json({ message: 'Status is required' });
     }
@@ -267,44 +267,24 @@ router.put('/trips/:tripId/status', async (req, res) => {
         const params = [status, tripId];
 
         if (status === 'on-going') {
-            sql = `
-                UPDATE trips
-                SET statuses = ?, pickupTime = NOW()
-                WHERE id = ?
-            `;
+            sql = `UPDATE trips SET statuses = ?, pickupTime = NOW() WHERE id = ?`;
         } else if (status === 'completed') {
             sql = `
                 UPDATE trips
                 SET statuses = ?, dropOffTime = NOW(), 
-                    duration_minutes = TIMESTAMPDIFF(MINUTE, pickupTime, NOW()), 
+                    duration_minutes = CASE 
+                        WHEN pickupTime IS NOT NULL THEN TIMESTAMPDIFF(MINUTE, pickupTime, NOW()) 
+                        ELSE NULL 
+                    END, 
                     distance_traveled = ? 
                 WHERE id = ?
             `;
-            params.push(distance_traveled,duration_minutes);
+            params.push(distance_traveled, tripId);
         } else if (status === 'canceled') {
-            sql = `
-                UPDATE trips
-                SET statuses = ?, cancellation_reason = ?, cancel_by = ? 
-                WHERE id = ${tripId}
-            `;
-            params.push(cancellation_reason, cancel_by, tripId); // Correct order
-        }
-        
-        else if (status === 'accepted') {
-            // If trip is accepted, update status to 'accepted'
-            sql = `
-                UPDATE trips
-                SET statuses = ?
-                WHERE id = ?
-            `;
-        } else if (status === 'declined') {
-            // If trip is declined, update status to 'declined'
-            sql = `
-                UPDATE trips
-                SET statuses = ?, cancellation_reason = ?, cancel_by = ? 
-                WHERE id = ?
-            `;
-            params.push(cancellation_reason, cancel_by);
+            sql = `UPDATE trips SET statuses = ?, cancellation_reason = ?, cancel_by = ? WHERE id = ?`;
+            params.push(cancellation_reason, cancel_by, tripId);
+        } else if (status === 'accepted' || status === 'declined') {
+            sql = `UPDATE trips SET statuses = ? WHERE id = ?`;
         } else {
             return res.status(400).json({ message: 'Invalid status' });
         }
@@ -321,6 +301,7 @@ router.put('/trips/:tripId/status', async (req, res) => {
         res.status(500).json({ message: 'Internal server error' });
     }
 });
+
 // Endpoint to fetch the latest trip status for a specific user
 router.get('/trips/statuses/:user_id', async (req, res) => {
     console.log('Fetching latest trip status for user:', req.params);
