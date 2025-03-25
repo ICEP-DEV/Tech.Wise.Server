@@ -247,7 +247,7 @@ router.get('/driverTrips', async (req, res) => {
 // Endpoint to update the trip status
 router.put('/trips/:tripId/status', async (req, res) => {
     const { tripId } = req.params;
-    const { status, cancellation_reason, cancel_by, distance_traveled } = req.body;
+    const { status, cancellation_reason, cancel_by, distance_traveled, duration_minutes } = req.body;
     // Before updating, check if the trip exists
     const [tripExists] = await pool.query('SELECT * FROM trips WHERE id = ?', [tripId]);
 
@@ -280,7 +280,7 @@ router.put('/trips/:tripId/status', async (req, res) => {
                     distance_traveled = ? 
                 WHERE id = ?
             `;
-            params.push(distance_traveled);
+            params.push(distance_traveled,duration_minutes);
         } else if (status === 'canceled') {
             sql = `
                 UPDATE trips
