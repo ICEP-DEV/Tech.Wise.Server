@@ -334,6 +334,8 @@ router.get('/trips/statuses/:user_id', async (req, res) => {
 //endpoint to delete chat messages
 router.post("/messages", async (req, res) => {
     const { senderId, receiverId, messages, tripId } = req.body;
+    console.log("Request Body:", req.body);
+    
 
     if (!senderId || !receiverId || !messages || !tripId) {
         return res.status(400).json({ message: "Missing required fields" });
