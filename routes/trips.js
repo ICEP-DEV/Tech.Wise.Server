@@ -340,12 +340,11 @@ router.post("/messages", async (req, res) => {
     }
 
     try {
-        // Insert multiple messages into the database
         const sql = `INSERT INTO messages (sender_id, receiver_id, message, trip_id) VALUES (?, ?, ?, ?)`;
 
-        // Loop through the messages array and insert each message
+        // Loop through each message in the messages array and insert it into the database
         for (let message of messages) {
-            await pool.query(sql, [senderId, receiverId, JSON.stringify(message), tripId]);
+            await pool.query(sql, [senderId, receiverId, message.message, tripId]);
         }
 
         res.status(201).json({ message: "Messages stored successfully" });
