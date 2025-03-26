@@ -348,14 +348,22 @@ router.post("/messages", async (req, res) => {
     }
 
     try {
-        // Loop through each message in the messages array and insert it into the database
-        for (let messageContent of messages) {
-            // Insert the message into the database
-            const sql = `INSERT INTO messages (sender_id, receiver_id, message, timestamp, trip_id) VALUES (?, ?, ?, NOW(), ?)`;
-            await pool.query(sql, [senderId, receiverId, messageContent, tripId]);
-        }
+        // Prepare the conversation data to be stored in a single JSON object
+        const conversation = messages.map((msg) => ({
+            senderId: senderId,
+            receiverId: receiverId,
+            message: msg,
+            timestamp: new Date().toISOString() // Get current timestamp
+        }));
 
-        res.status(201).json({ message: "Messages stored successfully" });
+        // Convert the conversation into a serialized JSON string
+        const conversationString = JSON.stringify(conversation);
+
+        // Insert the conversation into the database
+        const sql = `INSERT INTO messages (sender_id, receiver_id, message, timestamp, trip_id) VALUES (?, ?, ?, NOW(), ?)`;
+        await pool.query(sql, [senderId, receiverId, conversationString, tripId]);
+
+        res.status(201).json({ message: "Conversation stored successfully" });
     } catch (error) {
         console.error("Error saving messages:", error);
         res.status(500).json({ message: "Internal server error" });
