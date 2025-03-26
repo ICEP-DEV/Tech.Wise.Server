@@ -332,36 +332,42 @@ router.get('/trips/statuses/:user_id', async (req, res) => {
 });
 
 router.post("/messages", async (req, res) => {
-    const { tripId, messages } = req.body;
-    console.log("Request Body:", req.body);
+    const { senderId, receiverId, messages, tripId } = req.body;
+
+    console.log("Request Body:", req.body); // Log the entire request body for debugging
 
     // Check for required fields
-    if (!tripId || !messages || !Array.isArray(messages) || messages.length === 0) {
-        return res.status(400).json({ message: "Missing required fields or invalid messages" });
+    if (!senderId || !receiverId || !messages || !tripId) {
+        return res.status(400).json({ message: "Missing required fields" });
+    }
+
+    // Check if 'messages' is an array and contains at least one message
+    if (!Array.isArray(messages) || messages.length === 0) {
+        return res.status(400).json({ message: "Messages should be an array and contain at least one message" });
     }
 
     try {
         // Loop through each message in the messages array and insert it into the database
         for (let message of messages) {
-            const { senderId, receiverId, message: messageContent, timestamp } = message;
+            const { senderId: msgSenderId, receiverId: msgReceiverId, message: msgContent, timestamp } = message;
 
-            // Ensure all required fields are present
-            if (!senderId || !receiverId || !messageContent || !timestamp) {
-                continue; // Skip this message if it is missing any required fields
+            // Ensure that each message contains the required fields
+            if (!msgSenderId || !msgReceiverId || !msgContent || !timestamp) {
+                continue; // Skip this message if it's missing required fields
             }
 
             // Prepare the message data to be stored
             const messageData = {
-                senderId,
-                receiverId,
-                message: messageContent,
+                senderId: msgSenderId,
+                receiverId: msgReceiverId,
+                message: msgContent,
                 timestamp,
                 tripId
             };
 
-            // Insert the message into the database as a JSON object
+            // Insert the message into the database
             const sql = `INSERT INTO messages (sender_id, receiver_id, message, timestamp, trip_id) VALUES (?, ?, ?, ?, ?)`;
-            await pool.query(sql, [senderId, receiverId, JSON.stringify(messageData), timestamp, tripId]);
+            await pool.query(sql, [msgSenderId, msgReceiverId, JSON.stringify(messageData), timestamp, tripId]);
         }
 
         res.status(201).json({ message: "Messages stored successfully" });
@@ -370,6 +376,7 @@ router.post("/messages", async (req, res) => {
         res.status(500).json({ message: "Internal server error" });
     }
 });
+
 
 
 
