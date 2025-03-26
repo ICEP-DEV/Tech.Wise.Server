@@ -300,7 +300,7 @@ router.put('/trips/:tripId/status', async (req, res) => {
 
 // Endpoint to fetch the latest trip status for a specific user
 router.get('/trips/statuses/:user_id', async (req, res) => {
-    console.log('Fetching latest trip status for user:', req.params);
+    // console.log('Fetching latest trip status for user:', req.params);
     const { user_id } = req.params;
 
     if (!user_id) {
@@ -331,6 +331,7 @@ router.get('/trips/statuses/:user_id', async (req, res) => {
     }
 });
 
+//Endpoint to store messages
 router.post("/messages", async (req, res) => {
     const { senderId, receiverId, messages, tripId } = req.body;
 
