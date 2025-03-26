@@ -333,22 +333,28 @@ router.get('/trips/statuses/:user_id', async (req, res) => {
 
 //endpoint to delete chat messages
 router.post("/messages", async (req, res) => {
-    const { senderId, receiverId, message } = req.body;
+    const { senderId, receiverId, messages, tripId } = req.body;
 
-    if (!senderId || !receiverId || !message) {
+    if (!senderId || !receiverId || !messages || !tripId) {
         return res.status(400).json({ message: "Missing required fields" });
     }
 
     try {
-        const sql = `INSERT INTO messages (sender_id, receiver_id, message) VALUES (?, ?, ?)`;
-        await pool.query(sql, [senderId, receiverId, message]);
+        // Insert multiple messages into the database
+        const sql = `INSERT INTO messages (sender_id, receiver_id, message, trip_id) VALUES (?, ?, ?, ?)`;
 
-        res.status(201).json({ message: "Message stored successfully" });
+        // Loop through the messages array and insert each message
+        for (let message of messages) {
+            await pool.query(sql, [senderId, receiverId, JSON.stringify(message), tripId]);
+        }
+
+        res.status(201).json({ message: "Messages stored successfully" });
     } catch (error) {
-        console.error("Error saving message:", error);
+        console.error("Error saving messages:", error);
         res.status(500).json({ message: "Internal server error" });
     }
 });
+
 
 
 
