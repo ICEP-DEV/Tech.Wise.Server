@@ -245,7 +245,7 @@ router.get('/driverTrips', async (req, res) => {
 
 
 // Endpoint to update the trip status
-// Endpoint to update the trip status
+
 router.put('/trips/:tripId/status', async (req, res) => {
     const { tripId } = req.params;
     const { status, cancellation_reason, cancel_by, distance_traveled } = req.body;
@@ -256,6 +256,7 @@ router.put('/trips/:tripId/status', async (req, res) => {
     try {
         // Check if the trip exists before updating
         const [tripExists] = await pool.query('SELECT * FROM trips WHERE id = ?', [tripId]);
+        console.log('tripExists:', tripExists);
 
         if (!tripExists.length) {
             return res.status(404).json({ message: 'Trip not found' });
