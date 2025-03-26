@@ -349,26 +349,22 @@ router.post("/messages", async (req, res) => {
 
     try {
         // Loop through each message in the messages array and insert it into the database
-        for (let message of messages) {
-            const { senderId: msgSenderId, receiverId: msgReceiverId, message: msgContent, timestamp } = message;
-
-            // Ensure that each message contains the required fields
-            if (!msgSenderId || !msgReceiverId || !msgContent || !timestamp) {
-                continue; // Skip this message if it's missing required fields
-            }
+        for (let messageContent of messages) {
+            // Set a default timestamp for each message
+            const timestamp = new Date().toISOString(); // Get current time in ISO format
 
             // Prepare the message data to be stored
             const messageData = {
-                senderId: msgSenderId,
-                receiverId: msgReceiverId,
-                message: msgContent,
+                senderId,
+                receiverId,
+                message: messageContent,
                 timestamp,
                 tripId
             };
 
-            // Insert the message into the database
+            // Insert the message into the database as a JSON object
             const sql = `INSERT INTO messages (sender_id, receiver_id, message, timestamp, trip_id) VALUES (?, ?, ?, ?, ?)`;
-            await pool.query(sql, [msgSenderId, msgReceiverId, JSON.stringify(messageData), timestamp, tripId]);
+            await pool.query(sql, [senderId, receiverId, JSON.stringify(messageData), timestamp, tripId]);
         }
 
         res.status(201).json({ message: "Messages stored successfully" });
