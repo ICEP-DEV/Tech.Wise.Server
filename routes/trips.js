@@ -335,7 +335,8 @@ router.get('/trips/statuses/:user_id', async (req, res) => {
 router.post("/messages", async (req, res) => {
     const { senderId, receiverId, messages, tripId } = req.body;
 
-    console.log("Request Body:", req.body); // Log the entire request body for debugging
+    // Log the request body for debugging
+    console.log("Request Body:", req.body);
 
     // Check for required fields
     if (!senderId || !receiverId || !messages || !tripId) {
@@ -348,16 +349,8 @@ router.post("/messages", async (req, res) => {
     }
 
     try {
-        // Prepare the conversation data to be stored in a single JSON object
-        const conversation = messages.map((msg) => ({
-            senderId: senderId,
-            receiverId: receiverId,
-            message: msg,
-            timestamp: new Date().toISOString() // Get current timestamp
-        }));
-
-        // Convert the conversation into a serialized JSON string
-        const conversationString = JSON.stringify(conversation);
+        // Convert the messages array into a JSON string
+        const conversationString = JSON.stringify(messages);
 
         // Insert the conversation into the database
         const sql = `INSERT INTO messages (sender_id, receiver_id, message, timestamp, trip_id) VALUES (?, ?, ?, NOW(), ?)`;
