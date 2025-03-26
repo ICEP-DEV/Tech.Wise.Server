@@ -245,25 +245,26 @@ router.get('/driverTrips', async (req, res) => {
 
 
 // Endpoint to update the trip status
+// Endpoint to update the trip status
 router.put('/trips/:tripId/status', async (req, res) => {
     const { tripId } = req.params;
-    const { status, cancellation_reason, cancel_by, distance_traveled, duration_minutes } = req.body;
-console.log('Request Body:', req.body);
-console.log('Request Params:', req.params);
+    const { status, cancellation_reason, cancel_by, distance_traveled } = req.body;
 
-
-    // Check if the trip exists before updating
-    const [tripExists] = await pool.query('SELECT * FROM trips WHERE id = ?', [tripId]);
-
-    if (!tripExists.length) {
-        return res.status(404).json({ message: 'Trip not found' });
-    }
-
-    if (!status) {
-        return res.status(400).json({ message: 'Status is required' });
-    }
+    console.log('Request Body:', req.body);
+    console.log('Request Params:', req.params);
 
     try {
+        // Check if the trip exists before updating
+        const [tripExists] = await pool.query('SELECT * FROM trips WHERE id = ?', [tripId]);
+
+        if (!tripExists.length) {
+            return res.status(404).json({ message: 'Trip not found' });
+        }
+
+        if (!status) {
+            return res.status(400).json({ message: 'Status is required' });
+        }
+
         let sql;
         let params = [status, tripId]; // Default params for status update
 
@@ -278,18 +279,18 @@ console.log('Request Params:', req.params);
                     distance_traveled = ? 
                 WHERE id = ?
             `;
-            params.splice(1, 0, distance_traveled); // Insert `distance_traveled` in the correct position
+            params = [status, distance_traveled, tripId]; // Correct order of parameters
 
         } else if (status === 'canceled') {
             sql = `UPDATE trips SET statuses = ?, cancellation_reason = ?, cancel_by = ? WHERE id = ?`;
-            params.push(cancellation_reason, cancel_by);
+            params = [status, cancellation_reason, cancel_by, tripId];
 
         } else if (status === 'accepted') {
             sql = `UPDATE trips SET statuses = ? WHERE id = ?`;
 
         } else if (status === 'declined') {
             sql = `UPDATE trips SET statuses = ?, cancellation_reason = ?, cancel_by = ? WHERE id = ?`;
-            params.push(cancellation_reason, cancel_by, tripId);
+            params = [status, cancellation_reason, cancel_by, tripId];
 
         } else {
             return res.status(400).json({ message: 'Invalid status' });
@@ -308,6 +309,7 @@ console.log('Request Params:', req.params);
         res.status(500).json({ message: 'Internal server error' });
     }
 });
+
 
 // Endpoint to fetch the latest trip status for a specific user
 router.get('/trips/statuses/:user_id', async (req, res) => {
@@ -328,7 +330,7 @@ router.get('/trips/statuses/:user_id', async (req, res) => {
 
     try {
         const connection = await pool.getConnection();
-        const [rows] = await connection.execute(sql, [user_id,user_id]); // Fixed: Pass only one parameter
+        const [rows] = await connection.execute(sql, [user_id, user_id]); // Fixed: Pass only one parameter
         connection.release();
 
         if (rows.length === 0) {
