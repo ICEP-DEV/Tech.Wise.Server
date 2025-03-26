@@ -214,7 +214,7 @@ router.get('/api/car-listings', async (req, res) => {
 router.get('/driverTrips', async (req, res) => {
     const { driverId } = req.query; // Use query parameters instead of route params
 
-    console.log('Fetching trips for driverId:', driverId);
+    // console.log('Fetching trips for driverId:', driverId);
 
     // Validate driverId
     if (!driverId) {
@@ -249,8 +249,8 @@ router.put('/trips/:tripId/status', async (req, res) => {
     const { tripId } = req.params;
     const { status, cancellation_reason, cancel_by, distance_traveled } = req.body;
 
-    console.log('Received tripId:', tripId);
-    console.log('Request Body:', req.body);
+    // console.log('Received tripId:', tripId);
+    // console.log('Request Body:', req.body);
 
     const [tripExists] = await pool.query('SELECT * FROM trips WHERE id = ?', [tripId]);
     if (!tripExists.length) {
