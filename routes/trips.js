@@ -27,7 +27,7 @@ router.post('/trips', async (req, res) => {
         pickUpCoordinates,
         dropOffCoordinates,
         payment_status
-    } = req.body.tripDatas;
+    } = req.body.tripData;
 
     console.log('Extracted Data:', {
         customerId,
@@ -374,33 +374,6 @@ router.post("/messages", async (req, res) => {
     } catch (error) {
         console.error("Error saving messages:", error);
         res.status(500).json({ message: "Internal server error" });
-    }
-});
-
-router.put('/updateDriverState', async (req, res) => {
-    const { user_id, state } = req.body; // Use user_id to match the recipient structure
-
-    console.log('Updating driver status for user_id:', user_id);
-
-    if (!user_id || !state) {
-        return res.status(400).json({ message: 'User ID and state are required' });
-    }
-
-    const sql = `UPDATE driver SET state = ? WHERE users_id = ?`;
-
-    try {
-        const startTime = Date.now();
-        const [result] = await pool.query(sql, [state, user_id]);
-        console.log(`Query executed in ${Date.now() - startTime} ms`);
-
-        if (result.affectedRows > 0) {
-            res.json({ message: 'Status updated successfully' });
-        } else {
-            res.status(404).json({ message: 'Driver not found' });
-        }
-    } catch (error) {
-        console.error('Error executing query:', error);
-        res.status(500).json({ message: 'Internal server error' });
     }
 });
 
