@@ -27,7 +27,7 @@ router.post('/trips', async (req, res) => {
         pickUpCoordinates,
         dropOffCoordinates,
         payment_status
-    } = req.body.tripData;
+    } = req.body.extractedData// Use extractedData or req.body directly
 
     console.log('Extracted Data:', {
         customerId,
