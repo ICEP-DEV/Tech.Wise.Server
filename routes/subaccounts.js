@@ -8,10 +8,10 @@ const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY;
 
 // Create subaccount endpoint
 router.post("/create-subaccount", async (req, res) => {
-    const { business_name, settlement_bank, account_number, bank_code, percentage_charge } = req.body;
+    const { business_name, settlement_bank, account_number, percentage_charge } = req.body;
     console.log(req.body); // Log the request body for debugging
 
-    if (!business_name || !settlement_bank || !account_number || !percentage_charge || bank_code) {
+    if (!business_name || !settlement_bank || !account_number || !percentage_charge) {
         return res.status(400).json({ error: "All fields are required" });
     }
 
@@ -23,7 +23,7 @@ router.post("/create-subaccount", async (req, res) => {
                 settlement_bank,
                 account_number,
                 percentage_charge,
-                bank_code,
+                // bank_code,
             },
             {
                 headers: {
