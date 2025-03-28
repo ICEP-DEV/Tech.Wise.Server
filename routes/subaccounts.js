@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const axios = require("axios");
-const pool = require("../config/config");
+const pool = require("../config/config"); // Assuming pool is exported from your config file
 require("dotenv").config();
 
 const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY;
@@ -39,4 +39,22 @@ router.post("/create-subaccount", async (req, res) => {
     }
 });
 
+// Store subaccount details into the database using connection pool
+router.post('/store-subaccount', (req, res) => {
+    const { user_id, subaccount_code, business_name, settlement_bank, currency, percentage_charge, is_verified, created_at, updated_at } = req.body;
+  
+    // Insert into database using pool
+    const query = `INSERT INTO subaccounts (user_id, subaccount_code, business_name, settlement_bank, currency, percentage_charge, is_verified, created_at, updated_at) 
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+
+    pool.query(query, [user_id, subaccount_code, business_name, settlement_bank, currency, percentage_charge, is_verified, created_at, updated_at], (error, results) => {
+        if (error) {
+            console.log(error);
+            return res.status(500).json({ message: "Error saving subaccount data" });
+        }
+        res.status(200).json({ message: "Subaccount data saved successfully" });
+    });
+});
+
 module.exports = router;
+
