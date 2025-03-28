@@ -56,5 +56,43 @@ router.post('/store-subaccount', (req, res) => {
     });
 });
 
+// Verify bank account endpoint
+router.post("/verify-bank-account", async (req, res) => {
+    const { account_number, bank_code } = req.body;
+    console.log(req.body); // Log the request body for debugging
+
+    if (!account_number || !bank_code) {
+        return res.status(400).json({ error: "Account number and bank code are required" });
+    }
+
+    try {
+        const response = await axios.get(
+            `https://api.paystack.co/bank/resolve?account_number=${account_number}&bank_code=${bank_code}`,
+            {
+                headers: {
+                    Authorization: `Bearer ${PAYSTACK_SECRET_KEY}`,
+                    "Content-Type": "application/json",
+                },
+            }
+        );
+
+        // Check if Paystack response is valid
+        if (response.data.status) {
+            return res.status(200).json({
+                valid: true,
+                account_number: response.data.data.account_number,
+                bank_name: response.data.data.bank_name,
+                account_name: response.data.data.account_name,
+            });
+        } else {
+            return res.status(400).json({ error: "Invalid account details" });
+        }
+    } catch (error) {
+        console.error("Error verifying bank account:", error.response?.data || error);
+        return res.status(500).json({ error: error.response?.data || "An error occurred" });
+    }
+});
+
+
 module.exports = router;
 
