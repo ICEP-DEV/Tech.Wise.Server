@@ -6,16 +6,34 @@ require("dotenv").config();
 
 const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY;
 
-// Create subaccount endpoint
+// Create subaccount endpoint with verification
 router.post("/create-subaccount", async (req, res) => {
-    const { business_name, settlement_bank, account_number } = req.body;
-    const percentage_charge = '3'; // Default value
-    if (!business_name || !settlement_bank || !account_number || !percentage_charge) {
+    const { business_name, settlement_bank, account_number, bank_code } = req.body;
+    const percentage_charge = "3"; // Default value
+
+    if (!business_name || !settlement_bank || !account_number || !bank_code || !percentage_charge) {
         return res.status(400).json({ error: "All fields are required" });
     }
 
     try {
-        const response = await axios.post(
+        // Step 1: Verify the bank account details
+        const verifyResponse = await axios.get(
+            `https://api.paystack.co/bank/resolve?account_number=${account_number}&bank_code=${bank_code}`,
+            {
+                headers: {
+                    Authorization: `Bearer ${PAYSTACK_SECRET_KEY}`,
+                    "Content-Type": "application/json",
+                },
+            }
+        );
+
+        // If verification fails, return an error
+        if (!verifyResponse.data.status) {
+            return res.status(400).json({ error: "Invalid account number or bank details" });
+        }
+
+        // Step 2: Create the subaccount after successful verification
+        const subaccountResponse = await axios.post(
             "https://api.paystack.co/subaccount",
             {
                 business_name,
@@ -31,7 +49,7 @@ router.post("/create-subaccount", async (req, res) => {
             }
         );
 
-        return res.status(201).json(response.data);
+        return res.status(201).json(subaccountResponse.data);
     } catch (error) {
         return res.status(500).json({ error: error.response?.data || "An error occurred" });
     }
