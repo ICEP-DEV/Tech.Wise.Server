@@ -10,10 +10,18 @@ const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY;
 router.post("/create-subaccount", async (req, res) => {
     const { business_name, settlement_bank, account_number, bank_code, currency, percentage_charge } = req.body;
 
+    // Log the payload to ensure the correct values
+    console.log("Payload:", req.body);
 
     // Validate required fields
     if (!business_name || !settlement_bank || !account_number || !bank_code || !currency || !percentage_charge) {
         return res.status(400).json({ error: "All fields are required" });
+    }
+
+    // Check for a valid currency
+    const allowedCurrencies = ["NGN", "USD", "GHS", "KES"];
+    if (!allowedCurrencies.includes(currency)) {
+        return res.status(400).json({ error: `Invalid currency. Allowed: ${allowedCurrencies.join(", ")}` });
     }
 
     try {
@@ -28,7 +36,6 @@ router.post("/create-subaccount", async (req, res) => {
             }
         );
 
-        // If verification fails, return an error
         if (!verifyResponse.data.status) {
             return res.status(400).json({ error: "Invalid account number or bank details" });
         }
@@ -41,7 +48,7 @@ router.post("/create-subaccount", async (req, res) => {
                 settlement_bank,
                 account_number,
                 percentage_charge,
-                currency, // ✅ Added currency field
+                currency: currency.toUpperCase(),  // Ensure the currency is uppercase
             },
             {
                 headers: {
