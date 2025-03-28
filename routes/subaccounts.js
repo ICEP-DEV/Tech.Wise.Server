@@ -8,7 +8,7 @@ const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY;
 
 // Create subaccount endpoint
 router.post("/create-subaccount", async (req, res) => {
-    const { business_name, settlement_bank, account_number, percentage_charge } = req.body;
+    const { business_name, settlement_bank, account_number, percentage_charge, user_id } = req.body;
     console.log(req.body); // Log the request body for debugging
 
     if (!business_name || !settlement_bank || !account_number || !percentage_charge) {
