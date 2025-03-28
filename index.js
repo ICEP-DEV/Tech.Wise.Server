@@ -8,6 +8,9 @@ const carListing = require("./routes/carListing");
 const Login = require('./routes/Login');
 const customerDetails = require('./routes/customerDetails');
 const customerPayments = require('./routes/customerPayments');
+const subaccounts = require('./routes/subaccounts');
+
+
 const cors = require('cors');
 const path = require('path');
 const pool = require('./config/config');  // Import MySQL pool
@@ -41,6 +44,7 @@ app.use("/api", carListing);
 app.use("/api", Login);
 app.use("/api", customerPayments);
 app.use("/api", customerDetails);
+app.use("/api", subaccounts);
 
 // Global error handler
 app.use((err, req, res, next) => {
