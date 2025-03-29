@@ -78,12 +78,12 @@ router.post('/store-subaccount', async (req, res) => {
 
 // Verify bank account endpoint
 router.post("/verify-bank-account", async (req, res) => {
-    const { account_number, bank_code, currency = "NGN" } = req.body; // Default to NGN
+    const { account_number, bank_code, currency = "NGN", business_name } = req.body; // Default to NGN
     console.log(req.body); // Log the request body for debugging
 
     try {
         const response = await axios.get(
-            `https://api.paystack.co/bank/resolve?account_number=${account_number}&bank_code=${bank_code}&currency=${currency}`,
+            `https://api.paystack.co/bank/resolve?account_number=${account_number}&bank_code=${bank_code}&currency=${currency}&business_name=${business_name}`,
             {
                 headers: {
                     Authorization: `Bearer ${PAYSTACK_SECRET_KEY}`
@@ -94,7 +94,7 @@ router.post("/verify-bank-account", async (req, res) => {
         return res.status(200).json({
             valid: response.data.status,
             account_name: response.data.data.account_name,
-            bank_name: response.data.data.bank_name
+            bank_name: response.data.data.bank_name,
         });
 
     } catch (error) {
