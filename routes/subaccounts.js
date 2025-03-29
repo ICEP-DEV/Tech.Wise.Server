@@ -42,7 +42,8 @@ router.post("/create-subaccount", async (req, res) => {
 // Store subaccount details into the database using connection pool
 router.post('/store-subaccount', (req, res) => {
     const { user_id, subaccount_code, business_name, settlement_bank, currency, percentage_charge, is_verified, created_at, updated_at } = req.body;
-  
+    console.log(req.body); // Log the request body for debugging
+
     // Insert into database using pool
     const query = `INSERT INTO subaccounts (user_id, subaccount_code, business_name, settlement_bank, currency, percentage_charge, is_verified, created_at, updated_at) 
                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
