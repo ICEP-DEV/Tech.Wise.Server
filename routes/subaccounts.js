@@ -79,6 +79,7 @@ router.post('/store-subaccount', async (req, res) => {
 // Verify bank account endpoint
 router.post("/verify-bank-account", async (req, res) => {
     const { account_number, bank_code, currency = "NGN" } = req.body; // Default to NGN
+    console.log(req.body); // Log the request body for debugging
 
     try {
         const response = await axios.get(
@@ -95,7 +96,7 @@ router.post("/verify-bank-account", async (req, res) => {
             account_name: response.data.data.account_name,
             bank_name: response.data.data.bank_name
         });
-        
+
     } catch (error) {
         return res.status(500).json({
             error: error.response?.data?.message || "Verification failed"
