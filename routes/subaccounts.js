@@ -6,35 +6,48 @@ require("dotenv").config();
 
 const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY;
 
-// Create subaccount endpoint
-router.post("/create-subaccount", async (req, res) => {
-    const { business_name, settlement_bank, account_number, percentage_charge, user_id } = req.body;
-    console.log(req.body); // Log the request body for debugging
-
-    if (!business_name || !settlement_bank || !account_number || !percentage_charge) {
-        return res.status(400).json({ error: "All fields are required" });
-    }
-
-    try {
-        const response = await axios.post(
-            "https://api.paystack.co/subaccount",
-            {
-                business_name,
-                settlement_bank,
-                account_number,
-                percentage_charge,
-                // bank_code,
-            },
-            {
+// Function to create a subaccount with retry logic
+const createSubaccountWithRetry = async (data) => {
+    let retries = 3;
+    for (let i = 0; i < retries; i++) {
+        try {
+            const response = await axios.post("https://api.paystack.co/subaccount", data, {
                 headers: {
                     Authorization: `Bearer ${PAYSTACK_SECRET_KEY}`,
                     "Content-Type": "application/json",
                 },
-            }
-        );
+                timeout: 15000, // 15 seconds timeout
+            });
+            return response.data; // Return response if successful
+        } catch (error) {
+            console.error(`Attempt ${i + 1} failed:`, error.response?.data || error.message);
+            if (i === retries - 1) throw error; // Last attempt, throw error
+            await new Promise((res) => setTimeout(res, 2000 * (i + 1))); // Wait before retrying (2s, 4s, 6s)
+        }
+    }
+};
 
-        return res.status(201).json(response.data);
+// Create subaccount endpoint with retry logic
+router.post("/create-subaccount", async (req, res) => {
+    const { business_name, settlement_bank, account_number, percentage_charge, bank_code, user_id } = req.body;
+    console.log(req.body); // Log the request body for debugging
+
+    if (!business_name || !settlement_bank || !account_number || !percentage_charge || !bank_code) {
+        return res.status(400).json({ error: "All fields are required" });
+    }
+
+    try {
+        const response = await createSubaccountWithRetry({
+            business_name,
+            settlement_bank,
+            account_number,
+            percentage_charge,
+            bank_code, // Ensure bank code is included
+        });
+
+        return res.status(201).json(response);
     } catch (error) {
+        console.error("Paystack API Error:", error.response?.data || error);
         return res.status(500).json({ error: error.response?.data || "An error occurred" });
     }
 });
@@ -100,6 +113,4 @@ router.post("/verify-bank-account", async (req, res) => {
     }
 });
 
-
 module.exports = router;
-
