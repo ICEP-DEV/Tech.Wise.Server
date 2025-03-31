@@ -80,7 +80,7 @@ router.post('/store-subaccount', async (req, res) => {
 router.get("/resolve-account", async (req, res) => {
     const { account_number, bank_code, currency } = req.query;
     console.log(`Request to resolve account: ${account_number}, ${bank_code}, ${currency}`); // Log the request for debugging
-    
+
     if (!account_number || !bank_code) {
         return res.status(400).json({ error: "Account number and bank code are required" });
     }
@@ -110,30 +110,44 @@ router.get("/resolve-account", async (req, res) => {
 
 
 
-// Verify bank account endpoint
-router.post("/verify-bank-account", async (req, res) => {
-    const { account_number, bank_code, currency = "NGN", business_name } = req.body; // Default to NGN
+// Validate Bank Account Endpoint
+router.post("/validate-bank-account", async (req, res) => {
+    const { bank_code, country_code, account_number, account_name, account_type, document_type, document_number } = req.body;
     console.log(req.body); // Log the request body for debugging
 
+    // Validate required fields
+    if (!bank_code || !country_code || !account_number || !account_name || !account_type || !document_type || !document_number) {
+        return res.status(400).json({ error: "All fields are required for bank validation." });
+    }
+
     try {
-        const response = await axios.get(
-            `https://api.paystack.co/bank/resolve?account_number=${account_number}&bank_code=${bank_code}&currency=${currency}&business_name=${business_name}`,
+        const response = await axios.post(
+            "https://api.paystack.co/bank/validate",
+            {
+                bank_code,
+                country_code,
+                account_number,
+                account_name,
+                account_type,
+                document_type,
+                document_number
+            },
             {
                 headers: {
-                    Authorization: `Bearer ${PAYSTACK_SECRET_KEY}`
+                    Authorization: PAYSTACK_SECRET_KEY,
+                    "Content-Type": "application/json"
                 }
             }
         );
 
         return res.status(200).json({
-            valid: response.data.status,
-            account_name: response.data.data.account_name,
-            bank_name: response.data.data.bank_name,
+            success: response.data.status,
+            message: response.data.message,
+            data: response.data.data
         });
-
     } catch (error) {
         return res.status(500).json({
-            error: error.response?.data?.message || "Verification failed"
+            error: error.response?.data?.message || "Bank account validation failed"
         });
     }
 });
