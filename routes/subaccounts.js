@@ -112,26 +112,36 @@ router.get("/resolve-account", async (req, res) => {
 
 // Validate Bank Account Endpoint
 router.get("/verify-subaccount", async (req, res) => {
-    const { subaccountCode } = req.query; // Extract subaccount code from query parameters
-    console.log(`Request to verify subaccount: ${subaccountCode}`); // Log the request for debugging
+    const { subaccountCode, bank_code, country_code, account_name, account_number } = req.query; // Extract parameters from query
 
-    if (!subaccountCode) {
+    // Check if the required parameters are provided
+    if (!subaccountCode || !bank_code || !country_code || !account_name || !account_number) {
         return res.status(400).json({
-            error: "Subaccount code is required.",
+            error: "All parameters (subaccountCode, bank_code, country_code, account_name, account_number) are required.",
         });
     }
 
+    console.log(`Request to verify subaccount: ${subaccountCode} with bank_code: ${bank_code}, country_code: ${country_code}, account_name: ${account_name}, account_number: ${account_number}`);
+
     try {
+        // Make a GET request to the Paystack API to verify the subaccount
         const response = await axios.get(
             `https://api.paystack.co/subaccount/${subaccountCode}`,
             {
                 headers: {
                     Authorization: `Bearer ${PAYSTACK_SECRET_KEY}`,
                     "Content-Type": "application/json"
+                },
+                params: {
+                    bank_code,
+                    country_code,
+                    account_name,
+                    account_number
                 }
             }
         );
 
+        // Check if the response status is successful
         if (response.data.status) {
             return res.status(200).json({
                 success: true,
@@ -148,6 +158,7 @@ router.get("/verify-subaccount", async (req, res) => {
     } catch (error) {
         console.error("Error:", error.response?.data || error.message);
 
+        // Handle errors based on the response
         if (error.response) {
             return res.status(400).json({
                 error: error.response.data?.message || "Failed to retrieve subaccount details"
@@ -159,6 +170,7 @@ router.get("/verify-subaccount", async (req, res) => {
         }
     }
 });
+
 
 
 module.exports = router;
