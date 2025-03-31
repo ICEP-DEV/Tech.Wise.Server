@@ -111,59 +111,45 @@ router.get("/resolve-account", async (req, res) => {
 
 
 // Validate Bank Account Endpoint
-router.post("/validate-bank-account", async (req, res) => {
-    const { bank_code, country_code, account_number, account_name, account_type, document_type, document_number } = req.body;
-    console.log(req.body); // Log the request body for debugging
-
-    // Validate required fields
-    if (!bank_code || !country_code || !account_number || !account_name || !account_type || !document_type || !document_number) {
-        return res.status(400).json({ error: "All fields are required for bank validation." });
-    }
+router.get("/verify-subaccount", async (req, res) => {
+    const {subaccountCode} = req.params;
 
     try {
-        const response = await axios.post(
-            "https://api.paystack.co/bank/validate", // Paystack bank validation endpoint
-            {
-                bank_code,
-                country_code,
-                account_number,
-                account_name,
-                account_type,
-                document_type,
-                document_number
-            },
+        const response = await axios.get(
+            `https://api.paystack.co/subaccount/${subaccountCode}`,
             {
                 headers: {
-                    Authorization: `Bearer ${PAYSTACK_SECRET_KEY}`, // Include 'Bearer' prefix with the secret key
+                    Authorization: `Bearer ${PAYSTACK_SECRET_KEY}`,
                     "Content-Type": "application/json"
                 }
             }
         );
 
-        console.log(response.data); // Log the response from Paystack for debugging
-
-        // Check if the response is successful
-        if (response.data.status === "success") {
+        if (response.data.status) {
             return res.status(200).json({
                 success: true,
-                message: response.data.message,
+                message: "Subaccount details retrieved successfully",
                 data: response.data.data
             });
         } else {
-            return res.status(400).json({
+            return res.status(404).json({
                 success: false,
-                message: "Bank validation failed",
+                message: "Subaccount not found or invalid",
                 data: response.data
             });
         }
-
     } catch (error) {
-        console.error("Error:", error.response?.data || error.message); // Log the error for debugging
+        console.error("Error:", error.response?.data || error.message);
 
-        // Handle any errors during the API request
-        return res.status(500).json({
-            error: error.response?.data?.message || "Bank account validation failed"
-        });
+        if (error.response) {
+            return res.status(400).json({
+                error: error.response.data?.message || "Failed to retrieve subaccount details"
+            });
+        } else {
+            return res.status(500).json({
+                error: error.message || "Internal Server Error"
+            });
+        }
     }
 });
 
