@@ -76,6 +76,39 @@ router.post('/store-subaccount', async (req, res) => {
     }
 });
 
+// Resolve Account Endpoint
+router.get("/resolve-account", async (req, res) => {
+    const { account_number, bank_code } = req.query;
+    
+    if (!account_number || !bank_code) {
+        return res.status(400).json({ error: "Account number and bank code are required" });
+    }
+
+    try {
+        const response = await axios.get(
+            `https://api.paystack.co/bank/resolve?account_number=${account_number}&bank_code=${bank_code}`,
+            {
+                headers: {
+                    Authorization: `Bearer ${PAYSTACK_SECRET_KEY}`,
+                },
+            }
+        );
+
+        return res.status(200).json({
+            valid: response.data.status,
+            account_name: response.data.data.account_name,
+            bank_name: response.data.data.bank_name,
+        });
+    } catch (error) {
+        return res.status(500).json({
+            error: error.response?.data?.message || "Account resolution failed",
+        });
+    }
+});
+
+
+
+
 // Verify bank account endpoint
 router.post("/verify-bank-account", async (req, res) => {
     const { account_number, bank_code, currency = "NGN", business_name } = req.body; // Default to NGN
