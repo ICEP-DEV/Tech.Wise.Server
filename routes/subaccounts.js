@@ -122,7 +122,7 @@ router.post("/validate-bank-account", async (req, res) => {
 
     try {
         const response = await axios.post(
-            "https://api.paystack.co/bank/validate",
+            "https://api.paystack.co/bank/validate", // Paystack bank validation endpoint
             {
                 bank_code,
                 country_code,
@@ -134,19 +134,33 @@ router.post("/validate-bank-account", async (req, res) => {
             },
             {
                 headers: {
-                    Authorization: PAYSTACK_SECRET_KEY,
+                    Authorization: `Bearer ${PAYSTACK_SECRET_KEY}`, // Include 'Bearer' prefix with the secret key
                     "Content-Type": "application/json"
                 }
             }
         );
-        console.log(response.data); // Log the response for debugging
 
-        return res.status(200).json({
-            success: response.data.status,
-            message: response.data.message,
-            data: response.data.data
-        });
+        console.log(response.data); // Log the response from Paystack for debugging
+
+        // Check if the response is successful
+        if (response.data.status === "success") {
+            return res.status(200).json({
+                success: true,
+                message: response.data.message,
+                data: response.data.data
+            });
+        } else {
+            return res.status(400).json({
+                success: false,
+                message: "Bank validation failed",
+                data: response.data
+            });
+        }
+
     } catch (error) {
+        console.error("Error:", error.response?.data || error.message); // Log the error for debugging
+
+        // Handle any errors during the API request
         return res.status(500).json({
             error: error.response?.data?.message || "Bank account validation failed"
         });
