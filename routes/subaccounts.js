@@ -139,7 +139,8 @@ router.post("/verify-subaccount", async (req, res) => {
                     bank_code,
                     country_code,
                     account_name,
-                    account_number
+                    account_number,
+                    is_verified: true // Assuming you want to check if the subaccount is verified
                 }
             }
         );
