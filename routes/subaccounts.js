@@ -114,6 +114,8 @@ router.get("/resolve-account", async (req, res) => {
 // Validate Bank Account Endpoint (POST)
 router.post("/verify-subaccount", async (req, res) => {
     const { subaccountCode, bank_code, country_code, account_name, account_number } = req.body; // Extract parameters from the body
+    console.log(`Request to verify subaccount: ${subaccountCode} with bank_code: ${bank_code}, country_code: ${country_code}, account_name: ${account_name}, account_number: ${account_number}`); // Log the request for debugging
+    console.log(req.body); // Log the request body for debugging
 
     // Check if the required parameters are provided
     if (!subaccountCode || !bank_code || !country_code || !account_name || !account_number) {
