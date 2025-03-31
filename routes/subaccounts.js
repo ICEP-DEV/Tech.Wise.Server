@@ -175,5 +175,66 @@ router.post("/verify-subaccount", async (req, res) => {
     }
 });
 
+//fetch subaccounts endpoint
 
+router.post("/fetch-subaccount", (req, res) => {
+    const { subaccountCode } = req.body; // Extract subaccountCode from the body
+
+    // Validate the request to ensure subaccountCode is provided
+    if (!subaccountCode) {
+        return res.status(400).json({
+            error: "subaccountCode is required."
+        });
+    }
+
+    // Set up the request options for the Paystack API to fetch subaccount details
+    const options = {
+        hostname: 'api.paystack.co',
+        port: 443,
+        path: '/subaccount/' + subaccountCode,  // Use the actual subaccountCode
+        method: 'GET',
+        headers: {
+            Authorization: `Bearer ${PAYSTACK_SECRET_KEY}`,  // Use your actual Paystack Secret Key
+        }
+    };
+
+    // Send the HTTPS request to Paystack
+    const request = https.request(options, (response) => {
+        let data = '';
+
+        response.on('data', (chunk) => {
+            data += chunk;
+        });
+
+        response.on('end', () => {
+            const responseData = JSON.parse(data);
+
+            // Check if the response from Paystack is successful
+            if (responseData.status) {
+                return res.status(200).json({
+                    success: true,
+                    message: 'Subaccount details retrieved successfully',
+                    data: responseData.data,
+                });
+            } else {
+                return res.status(404).json({
+                    success: false,
+                    message: 'Subaccount not found or invalid',
+                    data: responseData,
+                });
+            }
+        });
+    });
+
+    // Handle any errors in the HTTPS request
+    request.on('error', (error) => {
+        console.error("Error:", error);
+        return res.status(500).json({
+            error: error.message || "Internal Server Error"
+        });
+    });
+
+    // End the request
+    request.end();
+});
 module.exports = router;
