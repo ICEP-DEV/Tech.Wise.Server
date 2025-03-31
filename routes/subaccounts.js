@@ -78,7 +78,8 @@ router.post('/store-subaccount', async (req, res) => {
 
 // Resolve Account Endpoint
 router.get("/resolve-account", async (req, res) => {
-    const { account_number, bank_code } = req.query;
+    const { account_number, bank_code, currency } = req.query;
+    console.log(`Request to resolve account: ${account_number}, ${bank_code}, ${currency}`); // Log the request for debugging
     
     if (!account_number || !bank_code) {
         return res.status(400).json({ error: "Account number and bank code are required" });
@@ -86,7 +87,7 @@ router.get("/resolve-account", async (req, res) => {
 
     try {
         const response = await axios.get(
-            `https://api.paystack.co/bank/resolve?account_number=${account_number}&bank_code=${bank_code}`,
+            `https://api.paystack.co/bank/resolve?account_number=${account_number}&bank_code=${bank_code}&currency=${currency}`,
             {
                 headers: {
                     Authorization: `Bearer ${PAYSTACK_SECRET_KEY}`,
