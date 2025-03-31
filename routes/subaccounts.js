@@ -3,6 +3,7 @@ const router = express.Router();
 const axios = require("axios");
 const pool = require("../config/config"); // Assuming pool is exported from your config file
 require("dotenv").config();
+const https = require('https'); // Import the https module
 
 const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY;
 
@@ -178,23 +179,23 @@ router.post("/verify-subaccount", async (req, res) => {
 //fetch subaccounts endpoint
 
 router.post("/fetch-subaccount", (req, res) => {
-    const { subaccountCode } = req.body; // Extract subaccountCode from the body
+    const { subaccountCode } = req.body;
 
-    // Validate the request to ensure subaccountCode is provided
+    // Validate if subaccountCode is provided
     if (!subaccountCode) {
         return res.status(400).json({
             error: "subaccountCode is required."
         });
     }
 
-    // Set up the request options for the Paystack API to fetch subaccount details
+    // Set up the request options for the Paystack API
     const options = {
         hostname: 'api.paystack.co',
         port: 443,
-        path: '/subaccount/' + subaccountCode,  // Use the actual subaccountCode
+        path: '/subaccount/' + subaccountCode,
         method: 'GET',
         headers: {
-            Authorization: `Bearer ${PAYSTACK_SECRET_KEY}`,  // Use your actual Paystack Secret Key
+            Authorization: `Bearer ${PAYSTACK_SECRET_KEY}`,
         }
     };
 
@@ -209,24 +210,22 @@ router.post("/fetch-subaccount", (req, res) => {
         response.on('end', () => {
             const responseData = JSON.parse(data);
 
-            // Check if the response from Paystack is successful
             if (responseData.status) {
                 return res.status(200).json({
                     success: true,
-                    message: 'Subaccount details retrieved successfully',
-                    data: responseData.data,
+                    message: "Subaccount details retrieved successfully",
+                    data: responseData.data
                 });
             } else {
                 return res.status(404).json({
                     success: false,
-                    message: 'Subaccount not found or invalid',
-                    data: responseData,
+                    message: "Subaccount not found or invalid",
+                    data: responseData
                 });
             }
         });
     });
 
-    // Handle any errors in the HTTPS request
     request.on('error', (error) => {
         console.error("Error:", error);
         return res.status(500).json({
@@ -234,7 +233,6 @@ router.post("/fetch-subaccount", (req, res) => {
         });
     });
 
-    // End the request
     request.end();
 });
 module.exports = router;
