@@ -112,9 +112,14 @@ router.get("/resolve-account", async (req, res) => {
 
 // Validate Bank Account Endpoint
 router.get("/verify-subaccount", async (req, res) => {
-    const {subaccountCode} = req.query; // Extract subaccount code from query parameters
+    const { subaccountCode } = req.query; // Extract subaccount code from query parameters
     console.log(`Request to verify subaccount: ${subaccountCode}`); // Log the request for debugging
-    
+
+    if (!subaccountCode) {
+        return res.status(400).json({
+            error: "Subaccount code is required.",
+        });
+    }
 
     try {
         const response = await axios.get(
