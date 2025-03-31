@@ -139,6 +139,7 @@ router.post("/validate-bank-account", async (req, res) => {
                 }
             }
         );
+        console.log(response.data); // Log the response for debugging
 
         return res.status(200).json({
             success: response.data.status,
