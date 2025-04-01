@@ -1,30 +1,29 @@
 const express = require("express");
 const router = express.Router();
-const axios = require("axios");
-const db = require("../config/config");
+const pool = require("../config/config"); // Import the MySQL connection pool
 require("dotenv").config();
 
-router.post('/register', (req, res) => {
-  console.log('Received request:', req.body);
+router.post('/register', async (req, res) => {
+    console.log('Received request:', req.body);
 
-  try {
-      const {id,  name, email, password, role,  gender,user_uid } = req.body;
+    try {
+        const { name, email, password, role, gender, user_uid } = req.body;
 
-      const sql = `INSERT INTO users ( name, email, password, role,    gender,user_uid) VALUES (?,  ?, ?, ?, ?,?)`;
+        if (!name || !email || !password || !role || !gender || !user_uid) {
+            return res.status(400).json({ message: "All fields are required" });
+        }
 
-      db.query(sql, [ name, email, password, role, gender,user_uid], (err, result) => {
-          if (err) {
-              console.error('MySQL Error:', err);
-              return res.status(500).json({ message: 'Database error', error: err });
-          }
-          res.status(201).json({ message: 'User registered successfully', userId: id });
-      });
-  } catch (error) {
-      console.error('Catch Block Error:', error);
-      res.status(500).json({ message: 'Error registering user', error: error.message });
-  }
-  
+        const sql = `INSERT INTO users (name, email, password, role, gender, user_uid) VALUES (?, ?, ?, ?, ?, ?)`;
+
+        const connection = await pool.getConnection();
+        const [result] = await connection.execute(sql, [name, email, password, role, gender, user_uid]);
+        connection.release(); // Release the connection back to the pool
+
+        res.status(201).json({ message: 'User registered successfully', userId: result.insertId });
+    } catch (error) {
+        console.error('Database error:', error);
+        res.status(500).json({ message: 'Error registering user', error: error.message });
+    }
 });
 
-  
-  module.exports = router;
+module.exports = router;
