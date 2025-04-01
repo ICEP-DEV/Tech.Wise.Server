@@ -377,11 +377,10 @@ router.post("/messages", async (req, res) => {
     }
 });
 
-//update driver state
 router.put('/updateDriverState', async (req, res) => {
-    const { user_id, state } = req.body; // Use user_id to match the recipient structure
+    const { user_id, state } = req.body;
 
-    console.log('Updating driver status for user_id:', user_id);
+    console.log('Updating driver status for user_id:', user_id, 'to state:', state);
 
     if (!user_id || !state) {
         return res.status(400).json({ message: 'User ID and state are required' });
@@ -391,8 +390,9 @@ router.put('/updateDriverState', async (req, res) => {
 
     try {
         const startTime = Date.now();
-        const [result] = await pool.query(sql, [state, user_id]);
+        const result = await pool.query(sql, [state, user_id]); // Removed destructuring
         console.log(`Query executed in ${Date.now() - startTime} ms`);
+        console.log('SQL Update Result:', result);
 
         if (result.affectedRows > 0) {
             res.json({ message: 'Status updated successfully' });
@@ -404,6 +404,7 @@ router.put('/updateDriverState', async (req, res) => {
         res.status(500).json({ message: 'Internal server error' });
     }
 });
+
 
 
 
