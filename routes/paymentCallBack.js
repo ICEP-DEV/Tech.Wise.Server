@@ -23,11 +23,11 @@ router.get("/payment-callback", async (req, res) => {
 
         if (paymentData.status === "success") {
             // Extract details from Paystack response
-            const verification_id = paymentData.reference; 
-            const customer_code = paymentData.customer.customer_code; 
+            const verification_id = paymentData.reference;
+            const customer_code = paymentData.customer.customer_code;
 
             // Try getting subscription_id from metadata if not present in response
-            let paystack_subscription_id = paymentData.paystackSubscriptionId; 
+            let paystack_subscription_id = paymentData.paystackSubscriptionId;
 
             if (!paystack_subscription_id && paymentData.metadata) {
                 paystack_subscription_id = paymentData.metadata.paystackSubscriptionId;
@@ -44,30 +44,29 @@ router.get("/payment-callback", async (req, res) => {
                 WHERE customer_code = ?
             `;
 
-            pool.getConnection((err, connection) => {
-                if (err) {
-                    console.error("Database Connection Error:", err);
-                    return res.status(500).json({ error: "Database connection failed" });
+            // Get a connection from the pool
+            const connection = await pool.getConnection();
+            try {
+                const [result] = await connection.query(updateSql, [paystack_subscription_id, verification_id, customer_code]);
+                connection.release(); // Release connection back to the pool
+
+                if (result.affectedRows === 0) {
+                    return res.status(404).json({ error: "Subscription not found" });
                 }
 
-                connection.query(updateSql, [paystack_subscription_id, verification_id, customer_code], (error) => {
-                    connection.release(); // Release connection back to the pool
+                console.log("Subscription updated successfully!");
 
-                    if (error) {
-                        console.error("Database Update Error:", error);
-                        return res.status(500).json({ error: "Database update failed" });
-                    }
-
-                    console.log("Subscription updated successfully!");
-
-                    // Send the correct response format
-                    return res.json({
-                        paystack_subscription_id: paystack_subscription_id || "Not Found",
-                        verification_id,
-                        customer_code
-                    });
+                // Send the correct response format
+                return res.json({
+                    paystack_subscription_id: paystack_subscription_id || "Not Found",
+                    verification_id,
+                    customer_code
                 });
-            });
+            } catch (dbError) {
+                connection.release();
+                console.error("Database Update Error:", dbError);
+                return res.status(500).json({ error: "Database update failed" });
+            }
         } else {
             console.log("Payment verification failed:", paymentData);
             return res.status(400).json({ error: "Payment verification failed" });
