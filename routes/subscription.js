@@ -379,7 +379,7 @@ router.post("/withdraw", async (req, res) => {
 // });
 router.post('/initialize-transaction-with-plan', async (req, res) => {
   const { email, planType, cost, user_id } = req.body;
-
+  console.log('Received data subscribed-------:', req.body); // Log the received data
   try {
     // Validate input fields
     if (!email || !cost || !planType || !user_id) {
@@ -627,7 +627,7 @@ router.get("/subscription", async (req, res) => {
     // Filter subscriptions for the specified customer and valid statuses
     const customerSubscriptions = subscriptions.filter(
       (sub) =>
-        sub.customer.id === customerIdNumber && 
+        sub.customer.id === customerIdNumber &&
         (sub.status === "active" || sub.status === "non-renewing")
     );
 
@@ -635,7 +635,7 @@ router.get("/subscription", async (req, res) => {
   } catch (error) {
     console.error("Error fetching subscriptions:", error);
     return res.status(500).json({ error: error.message });
-  } 
+  }
 });
 
 
@@ -651,7 +651,7 @@ router.get("/get-customer-id", async (req, res) => {
 
     // Define the SQL query to fetch the customer_id
     const sql = "SELECT customer_id FROM subscriptions WHERE user_id = ? LIMIT 1";
-    
+
     // Use pool.query for a promise-based database query
     const startTime = Date.now();
     const [rows] = await pool.query(sql, [user_id]);
@@ -666,7 +666,7 @@ router.get("/get-customer-id", async (req, res) => {
     // Return the found customer ID
     console.log("✅ Found customer ID:", rows[0].customer_id);
     return res.status(200).json({ customer_id: rows[0].customer_id });
-    
+
   } catch (error) {
     console.error("🔥 Backend Error fetching customer ID:", error);
     return res.status(500).json({ error: "Internal server error" });
@@ -809,47 +809,47 @@ router.post('/update-payment-method', async (req, res) => {
   const { email, subscription_code } = req.body;
 
   if (!subscription_code || !email) {
-      return res.status(400).json({ error: 'Subscription code and email are required' });
+    return res.status(400).json({ error: 'Subscription code and email are required' });
   }
 
   console.log("Fetching update link for subscription_code:", subscription_code);
 
   try {
-      // Generate update link
-      const response = await axios.get(
-          `https://api.paystack.co/subscription/${subscription_code}/manage/link`,
-          {
-              headers: {
-                Authorization: `Bearer ${PAYSTACK_SECRET_KEY}`,
-              },
-          }
-      );
-
-      const updateLink = response.data.data.link;
-
-      if (!updateLink) {
-          return res.status(400).json({ error: 'Could not retrieve update link from Paystack' });
+    // Generate update link
+    const response = await axios.get(
+      `https://api.paystack.co/subscription/${subscription_code}/manage/link`,
+      {
+        headers: {
+          Authorization: `Bearer ${PAYSTACK_SECRET_KEY}`,
+        },
       }
+    );
 
-      console.log("Update link:", updateLink);
+    const updateLink = response.data.data.link;
 
-      // Send email with update link (optional)
-      await axios.post(
-          `https://api.paystack.co/subscription/${subscription_code}/manage/email`,
-          { email },
-          {
-              headers: {
-                Authorization: `Bearer ${PAYSTACK_SECRET_KEY}`,
-                  'Content-Type': 'application/json',
-              },
-          }
-      );
+    if (!updateLink) {
+      return res.status(400).json({ error: 'Could not retrieve update link from Paystack' });
+    }
 
-      res.json({ link: updateLink });
+    console.log("Update link:", updateLink);
+
+    // Send email with update link (optional)
+    await axios.post(
+      `https://api.paystack.co/subscription/${subscription_code}/manage/email`,
+      { email },
+      {
+        headers: {
+          Authorization: `Bearer ${PAYSTACK_SECRET_KEY}`,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+
+    res.json({ link: updateLink });
 
   } catch (error) {
-      console.error("Error:", error.response?.data || error.message);
-      res.status(500).json({ error: error.response?.data?.message || 'Something went wrong' });
+    console.error("Error:", error.response?.data || error.message);
+    res.status(500).json({ error: error.response?.data?.message || 'Something went wrong' });
   }
 });
 // Cancel Subscription API
