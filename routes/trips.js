@@ -409,7 +409,7 @@ router.put('/updateDriverState', async (req, res) => {
       const result = await pool.query(sql, [state, user_id]);
       console.log('SQL Update Result:', result);
   
-      if (result.affectedRows > 0) {
+      if (result.affectedRows === 0) {
         return res.status(200).json({ message: 'Status updated successfully' });
       } else {
         return res.status(404).json({ message: 'Driver not found or state unchanged' });
