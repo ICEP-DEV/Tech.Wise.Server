@@ -399,7 +399,7 @@ router.put('/updateDriverState', async (req, res) => {
       // Prevent update if state is already the same
       if (currentState === state) {
         console.log('State is already the same. No update needed.');
-        return res.json({ message: 'State is already set to the requested value' });
+        return res.status(200).json({ message: 'State is already set to the requested value' });
       }
   
       const sql = `UPDATE driver SET state = ? WHERE users_id = ?`;
@@ -407,7 +407,7 @@ router.put('/updateDriverState', async (req, res) => {
       console.log('SQL Update Result:', result);
   
       if (result.affectedRows > 0) {
-        return res.json({ message: 'Status updated successfully' });
+        return res.status(200).json({ message: 'Status updated successfully' });
       } else {
         return res.status(404).json({ message: 'Driver not found or state unchanged' });
       }
@@ -416,6 +416,7 @@ router.put('/updateDriverState', async (req, res) => {
       return res.status(500).json({ message: 'Internal server error' });
     }
   });
+  
   
 
 
