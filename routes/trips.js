@@ -380,38 +380,29 @@ router.post("/messages", async (req, res) => {
 // Put method to update driver state
 router.put('/updateDriverState', async (req, res) => {
     const { user_id, state } = req.body;
+    console.log('Updating driver status for user_id:', user_id, 'to state:', state);
   
-    console.log('Received request to update driver status for user_id:', user_id, 'to state:', state);
-  
-    // Validate that both user_id and state are provided
     if (!user_id || !state) {
-      console.warn('Missing required fields: user_id or state');
       return res.status(400).json({ message: 'User ID and state are required' });
     }
   
-    // Check if the driver exists in the database
     const checkQuery = 'SELECT * FROM driver WHERE users_id = ?';
     try {
       const checkResult = await pool.query(checkQuery, [user_id]);
       console.log('User check result:', checkResult);
   
       if (checkResult.length === 0) {
-        console.warn('Driver not found in database for user_id:', user_id);
+        console.warn('Driver not found for user_id:', user_id);
         return res.status(404).json({ message: 'Driver not found' });
       }
   
-      // Proceed to update the driver's state
       const sql = `UPDATE driver SET state = ? WHERE users_id = ?`;
-      const startTime = Date.now();
       const result = await pool.query(sql, [state, user_id]);
-      console.log(`Query executed in ${Date.now() - startTime} ms`);
       console.log('SQL Update Result:', result);
   
-      // If no rows are affected, either the state was already the same, or the driver wasn't updated
       if (result.affectedRows > 0) {
         return res.json({ message: 'Status updated successfully' });
       } else {
-        console.warn('Driver status remained unchanged or user was not found');
         return res.status(404).json({ message: 'Driver not found or state unchanged' });
       }
     } catch (error) {
@@ -419,6 +410,7 @@ router.put('/updateDriverState', async (req, res) => {
       return res.status(500).json({ message: 'Internal server error' });
     }
   });
+  
 
 
 
