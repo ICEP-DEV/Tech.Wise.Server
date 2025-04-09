@@ -382,44 +382,44 @@ router.put('/updateDriverState', async (req, res) => {
     const { user_id, state } = req.body;
     console.log('Updating driver status for user_id:', user_id, 'to state:', state);
     console.log('Received PUT request for /updateDriverState');
-
-  console.log('Request body:', req.body); // Log the incoming request body
-
+    console.log('Request body:', req.body);
+  
     if (!user_id || !state) {
       return res.status(400).json({ message: 'User ID and state are required' });
     }
   
     const checkQuery = 'SELECT state FROM driver WHERE users_id = ?';
     try {
-      const checkResult = await pool.query(checkQuery, [user_id]);
-      console.log('User check result:', checkResult);
+      const [rows] = await pool.query(checkQuery, [user_id]);
+      console.log('User check result:', rows);
   
-      if (checkResult.length === 0) {
+      if (rows.length === 0) {
         return res.status(404).json({ message: 'Driver not found' });
       }
-      
-      const currentState = checkResult[0].state;
-      // Prevent update if state is already the same
+  
+      const currentState = rows[0].state;
+  
       if (currentState === state) {
         console.log('State is already the same. No update needed.');
         return res.status(200).json({ message: 'State is already set to the requested value' });
       }
-      
-      const sql = `UPDATE driver SET state = ? WHERE users_id = ?`;
-      const result = await pool.query(sql, [state, user_id]);
-      console.log('SQL Update Result:', result);
-      
-      if (result.affectedRows > 0) {
+  
+      const updateQuery = `UPDATE driver SET state = ? WHERE users_id = ?`;
+      const [updateResult] = await pool.query(updateQuery, [state, user_id]);
+      console.log('SQL Update Result:', updateResult);
+  
+      if (updateResult.affectedRows > 0) {
         return res.status(200).json({ message: 'Status updated successfully' });
       } else {
         return res.status(400).json({ message: 'Driver not found or state unchanged' });
       }
-      
+  
     } catch (error) {
       console.error('Error executing query:', error);
       return res.status(500).json({ message: 'Internal server error' });
     }
   });
+  
 
 // Get driver state
 router.get('/getDriverState', async (req, res, next) => {
