@@ -421,19 +421,28 @@ router.put('/updateDriverState', async (req, res) => {
     }
   });
 
-  //Get drivers state
-  router.get('/getDriverState', (req, res) => {
+// Get driver state
+router.get('/getDriverState', (req, res, next) => {
     const userId = req.query.userId; // Get userId from query parameters
     console.log('Fetching driver state for userId:', userId);
-    
+  
     if (!userId) {
       return res.status(400).json({ message: 'User ID is required' });
     }
+  
+    // Set a timeout for this route only
+    const timeout = setTimeout(() => {
+      console.log('Request to get driver state timed out');
+      return res.status(504).send('Gateway Timeout');
+    }, 15000); // Set the timeout to 15 seconds
   
     // Query to get the current state of the driver
     const query = 'SELECT state FROM driver WHERE users_id = ?';
   
     pool.query(query, [userId], (err, results) => {
+      // Clear the timeout once the query finishes (whether successful or error)
+      clearTimeout(timeout);
+  
       if (err) {
         console.error('Error fetching driver state:', err);
         return res.status(500).json({ message: 'Failed to fetch driver state', error: err.message });
@@ -448,6 +457,7 @@ router.put('/updateDriverState', async (req, res) => {
       return res.json({ state: driverState });
     });
   });
+  
   
   
 
