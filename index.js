@@ -52,6 +52,16 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'Internal server error' });
 });
 
+// Timeout middleware
+app.use((req, res, next) => {
+  res.setTimeout(5000, () => { // Set timeout to 5 seconds (5000 ms)
+    console.log('Request timed out');
+    res.status(504).send('Gateway Timeout');
+  });
+  next();
+});
+
+
 // Start the server
 app.listen(PORT, () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);
