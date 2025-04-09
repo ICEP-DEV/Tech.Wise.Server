@@ -423,7 +423,7 @@ router.put('/updateDriverState', async (req, res) => {
 
   //Get drivers state
   router.get('/getDriverState', (req, res) => {
-    const userId = req.query.user_id; // Get userId from query parameters
+    const userId = req.query.userId; // Get userId from query parameters
     console.log('Fetching driver state for userId:', userId);
     
     if (!userId) {
