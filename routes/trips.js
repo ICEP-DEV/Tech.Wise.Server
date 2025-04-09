@@ -381,7 +381,10 @@ router.post("/messages", async (req, res) => {
 router.put('/updateDriverState', async (req, res) => {
     const { user_id, state } = req.body;
     console.log('Updating driver status for user_id:', user_id, 'to state:', state);
-  
+    console.log('Received PUT request for /updateDriverState');
+
+  console.log('Request body:', req.body); // Log the incoming request body
+
     if (!user_id || !state) {
       return res.status(400).json({ message: 'User ID and state are required' });
     }
