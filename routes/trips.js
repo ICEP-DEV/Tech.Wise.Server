@@ -431,7 +431,7 @@ router.put('/updateDriverState', async (req, res) => {
     }
   
     // Query to get the current state of the driver
-    const query = 'SELECT state FROM driver WHERE user_id = ?';
+    const query = 'SELECT state FROM driver WHERE users_id = ?';
   
     pool.query(query, [userId], (err, results) => {
       if (err) {
