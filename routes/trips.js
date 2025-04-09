@@ -386,14 +386,20 @@ router.put('/updateDriverState', async (req, res) => {
       return res.status(400).json({ message: 'User ID and state are required' });
     }
   
-    const checkQuery = 'SELECT * FROM driver WHERE users_id = ?';
+    const checkQuery = 'SELECT state FROM driver WHERE users_id = ?';
     try {
       const checkResult = await pool.query(checkQuery, [user_id]);
       console.log('User check result:', checkResult);
   
       if (checkResult.length === 0) {
-        console.warn('Driver not found for user_id:', user_id);
         return res.status(404).json({ message: 'Driver not found' });
+      }
+  
+      const currentState = checkResult[0].state;
+      // Prevent update if state is already the same
+      if (currentState === state) {
+        console.log('State is already the same. No update needed.');
+        return res.json({ message: 'State is already set to the requested value' });
       }
   
       const sql = `UPDATE driver SET state = ? WHERE users_id = ?`;
