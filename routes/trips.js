@@ -422,7 +422,7 @@ router.put('/updateDriverState', async (req, res) => {
   });
 
 // Get driver state
-router.get('/getDriverState', (req, res, next) => {
+router.get('/getDriverState', async (req, res, next) => {
     const userId = req.query.userId; // Get userId from query parameters
     console.log('Fetching driver state for userId:', userId);
   
@@ -434,28 +434,32 @@ router.get('/getDriverState', (req, res, next) => {
     const timeout = setTimeout(() => {
       console.log('Request to get driver state timed out');
       return res.status(504).send('Gateway Timeout');
-    }, 15000); // Set the timeout to 15 seconds
+    }, 15000); // Timeout after 15 seconds
   
-    // Query to get the current state of the driver
-    const query = 'SELECT state FROM driver WHERE users_id = ?';
+    try {
+      // Query to get the current state of the driver
+      const query = 'SELECT state FROM driver WHERE users_id = ?';
   
-    pool.query(query, [userId], (err, results) => {
-      // Clear the timeout once the query finishes (whether successful or error)
+      // Execute the query using the pool.query method
+      const [result] = await pool.query(query, [userId]);
+  
+      // Clear the timeout once the query finishes
       clearTimeout(timeout);
   
-      if (err) {
-        console.error('Error fetching driver state:', err);
-        return res.status(500).json({ message: 'Failed to fetch driver state', error: err.message });
-      }
-  
-      if (results.length === 0) {
+      if (result.length === 0) {
         return res.status(404).json({ message: 'Driver not found' });
       }
   
       // Return the current state of the driver (online or offline)
-      const driverState = results[0].state;
+      const driverState = result[0].state;
       return res.json({ state: driverState });
-    });
+    } catch (err) {
+      // Clear the timeout in case of an error
+      clearTimeout(timeout);
+  
+      console.error('Error fetching driver state:', err);
+      return res.status(500).json({ message: 'Failed to fetch driver state', error: err.message });
+    }
   });
   
   
