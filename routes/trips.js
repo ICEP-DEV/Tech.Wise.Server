@@ -424,6 +424,7 @@ router.put('/updateDriverState', async (req, res) => {
   //Get drivers state
   router.get('/getDriverState', (req, res) => {
     const userId = req.query.user_id; // Get userId from query parameters
+    console.log('Fetching driver state for userId:', userId);
     
     if (!userId) {
       return res.status(400).json({ message: 'User ID is required' });
