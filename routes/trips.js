@@ -420,6 +420,33 @@ router.put('/updateDriverState', async (req, res) => {
       return res.status(500).json({ message: 'Internal server error' });
     }
   });
+
+  //Get drivers state
+  router.get('/getDriverState', (req, res) => {
+    const userId = req.query.userId; // Get userId from query parameters
+    
+    if (!userId) {
+      return res.status(400).json({ message: 'User ID is required' });
+    }
+  
+    // Query to get the current state of the driver
+    const query = 'SELECT state FROM driver WHERE user_id = ?';
+  
+    pool.query(query, [userId], (err, results) => {
+      if (err) {
+        console.error('Error fetching driver state:', err);
+        return res.status(500).json({ message: 'Failed to fetch driver state', error: err.message });
+      }
+  
+      if (results.length === 0) {
+        return res.status(404).json({ message: 'Driver not found' });
+      }
+  
+      // Return the current state of the driver (online or offline)
+      const driverState = results[0].state;
+      return res.json({ state: driverState });
+    });
+  });
   
   
 
