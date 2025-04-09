@@ -4,6 +4,7 @@ const axios = require("axios");
 const pool = require("../config/config");
 const https = require('https');
 const { log } = require("console");
+const { api } = require("../api/serverApi");
 require("dotenv").config();
 
 const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY;
@@ -379,25 +380,26 @@ router.post("/withdraw", async (req, res) => {
 // });
 router.post('/initialize-transaction-with-plan', async (req, res) => {
   const { email, planType, cost, user_id } = req.body;
-  console.log('Received data subscribed-------:', req.body); // Log the received data
+  console.log('➡️ Received request:', req.body);
+
+  const startTime = Date.now();
+
   try {
-    // Validate input fields
     if (!email || !cost || !planType || !user_id) {
-      return res.status(400).json({ error: 'Please provide a valid email, cost, plan type, and user ID.' });
+      return res.status(400).json({ error: 'Invalid input' });
     }
 
-    // Determine the plan code based on the plan type
-    let plan_code = planType === "Weekly" ? PAYSTACK_PLAN_WEEKLY : PAYSTACK_PLAN_MONTHLY;
+    const plan_code = planType === "Weekly" ? PAYSTACK_PLAN_WEEKLY : PAYSTACK_PLAN_MONTHLY;
 
-    // Initialize Paystack transaction
+    const paystackStart = Date.now();
     const paystackResponse = await axios.post(
       "https://api.paystack.co/transaction/initialize",
       {
         email,
         plan: plan_code,
-        amount: cost * 100,  // Convert to kobo
-        channels: ['card'], // Only allow card payments for subscriptions
-        callback_url: "http://10.0.2.2:3000/api/payment-success",
+        amount: cost * 100,
+        channels: ['card'],
+        callback_url: api + "payment-success",
       },
       {
         headers: {
@@ -406,45 +408,33 @@ router.post('/initialize-transaction-with-plan', async (req, res) => {
         },
       }
     );
-
-    console.log("Paystack response:", paystackResponse.data); // Debugging
+    console.log("✅ Paystack responded in", Date.now() - paystackStart, "ms");
 
     const { authorization_url, reference } = paystackResponse.data.data;
 
-    // Start a connection with the pool
+    const dbStart = Date.now();
     const connection = await pool.getConnection();
 
-    try {
-      // Check if the user_id exists in the users table
-      const [userResults] = await connection.query('SELECT id FROM users WHERE id = ?', [user_id]);
-
-      if (userResults.length === 0) {
-        return res.status(404).json({ error: "User not found" });
-      }
-
-      // If the user exists, insert the subscription into the subscriptions table
-      const insertSql = `
-        INSERT INTO subscriptions (plan_name, user_id, amount, reference, statuses)
-        VALUES (?, ?, ?, ?, '0')
-      `;
-
-      const [insertResult] = await connection.query(insertSql, [planType, user_id, cost, reference]);
-
-      console.log("Subscription added successfully!", insertResult);
-
-      // Return authorization URL and reference to the client
-      res.json({ authorization_url, reference });
-
-    } catch (error) {
-      console.error("Database error:", error);
-      res.status(500).json({ error: "Database error" });
-    } finally {
-      connection.release(); // Ensure connection is released back to the pool
+    const [userResults] = await connection.query('SELECT id FROM users WHERE id = ?', [user_id]);
+    if (userResults.length === 0) {
+      return res.status(404).json({ error: "User not found" });
     }
 
+    const [insertResult] = await connection.query(
+      `INSERT INTO subscriptions (plan_name, user_id, amount, reference, statuses)
+       VALUES (?, ?, ?, ?, '0')`,
+      [planType, user_id, cost, reference]
+    );
+    console.log("✅ DB actions took", Date.now() - dbStart, "ms");
+
+    connection.release();
+    console.log("🚀 Total request time:", Date.now() - startTime, "ms");
+
+    res.json({ authorization_url, reference });
+
   } catch (error) {
-    console.error("Paystack error:", error.response?.data || error.message);
-    res.status(500).json({ error: "Payment initialization failed" });
+    console.error("🔥 Error:", error.response?.data || error.message);
+    res.status(500).json({ error: "Internal server error" });
   }
 });
 
