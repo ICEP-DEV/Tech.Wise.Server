@@ -112,18 +112,24 @@ router.get('/tripHistory/:userId', async (req, res) => {
     const queryParams = [userId];
   
     if (status) {
-      query += ` AND statuses = ?`;
+      query += ` AND statuses = ?`;  // Correct column name
       queryParams.push(status);
     }
   
     try {
       const [rows] = await pool.query(query, queryParams);
+  
+      console.log("Fetched Trips for userId:", userId);
+      console.log("Status filter:", status);
+      console.log("Results:", rows);
+  
       res.json(rows);
     } catch (error) {
       console.error('Error fetching trips:', error);
       res.status(500).send('Error fetching trips');
     }
   });
+  
   
 
 // Endpoint to update real-time location in Firestore
