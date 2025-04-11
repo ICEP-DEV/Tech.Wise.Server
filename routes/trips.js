@@ -103,12 +103,18 @@ router.post('/trips', async (req, res) => {
 // Endpoint to fetch trips by user_id and status
 router.get('/tripHistory/:userId', (req, res) => {
     const userId = req.params.userId;
+    const status = req.query.status;  // Get status from query params
 
-    // SQL query to fetch trips from the database
-    const query = `
+    let query = `
       SELECT * FROM trips
       WHERE customerId = ?
     `;
+    const queryParams = [userId];
+
+    if (status) {
+        query += ` AND status = ?`;
+        queryParams.push(status);
+    }
 
     pool.getConnection((err, connection) => {
         if (err) {
@@ -116,18 +122,19 @@ router.get('/tripHistory/:userId', (req, res) => {
             return res.status(500).send('Error fetching trips');
         }
 
-        connection.query(query, [userId], (err, results) => {
-            connection.release(); // Release connection back to the pool
+        connection.query(query, queryParams, (err, results) => {
+            connection.release();
 
             if (err) {
                 console.error('Error fetching trips:', err);
                 return res.status(500).send('Error fetching trips');
             }
 
-            res.json(results);  // Return the fetched trips
+            res.json(results);
         });
     });
 });
+
 
 // Endpoint to update real-time location in Firestore
 router.post('/trips/update-location', async (req, res) => {
