@@ -112,7 +112,7 @@ router.get('/tripHistory/:userId', async (req, res) => {
     const queryParams = [userId];
   
     if (status) {
-      query += ` AND status = ?`;
+      query += ` AND statuses = ?`;
       queryParams.push(status);
     }
   
