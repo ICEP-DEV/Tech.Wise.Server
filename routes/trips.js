@@ -380,21 +380,40 @@ router.post("/messages", async (req, res) => {
     }
 });
 
+// Put method to update driver state
 router.put('/updateDriverState', async (req, res) => {
     const { user_id, state, onlineDuration, last_online_timestamp } = req.body;
-  
-    console.log('Updating driver status for user_id:', user_id, 'to state:', state);
-    console.log('Received PUT request for /updateDriverState');
-    console.log('Request body:', req.body);
   
     if (!user_id || !state) {
       return res.status(400).json({ message: 'User ID and state are required' });
     }
   
-    const checkQuery = 'SELECT state FROM driver WHERE users_id = ?';
     try {
+      // Get today's date at 00:00:00
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+  
+      const todayStartSQL = todayStart.toISOString().slice(0, 19).replace('T', ' ');
+  
+      // Sum all online time for today
+      const timeQuery = `
+        SELECT SUM(online_time) AS totalOnlineTime
+        FROM driver_log
+        WHERE users_id = ? AND log_date >= ?
+      `;
+  
+      const [timeResult] = await pool.query(timeQuery, [user_id, todayStartSQL]);
+      const totalOnlineToday = timeResult[0].totalOnlineTime || 0;
+  
+      const MAX_SECONDS_PER_DAY = 43200; // 12 hours in seconds
+  
+      if (state === 'online' && totalOnlineToday >= MAX_SECONDS_PER_DAY) {
+        return res.status(403).json({ message: 'You have reached the 12-hour daily work limit.' });
+      }
+  
+      // Only allow transition if it differs from current
+      const checkQuery = 'SELECT state FROM driver WHERE users_id = ?';
       const [rows] = await pool.query(checkQuery, [user_id]);
-      console.log('User check result:', rows);
   
       if (rows.length === 0) {
         return res.status(404).json({ message: 'Driver not found' });
@@ -403,35 +422,36 @@ router.put('/updateDriverState', async (req, res) => {
       const currentState = rows[0].state;
   
       if (currentState === state) {
-        console.log('State is already the same. No update needed.');
         return res.status(200).json({ message: 'State is already set to the requested value' });
       }
   
-      // Construct the update query with onlineDuration and last_online_timestamp
+      // Update driver state
       const updateQuery = `
-      UPDATE driver 
-      SET state = ?, 
-          online_time = ?, 
-          last_online_timestamp = COALESCE(?, NOW()) 
-      WHERE users_id = ?
-    `;
-    
+        UPDATE driver 
+        SET state = ?, 
+            online_time = ?, 
+            last_online_timestamp = COALESCE(?, NOW()) 
+        WHERE users_id = ?
+      `;
   
       const [updateResult] = await pool.query(updateQuery, [state, onlineDuration, last_online_timestamp, user_id]);
   
-      console.log('SQL Update Result:', updateResult);
-  
-      if (updateResult.affectedRows > 0) {
-        return res.status(200).json({ message: 'Status updated successfully' });
-      } else {
-        return res.status(400).json({ message: 'Driver not found or state unchanged' });
+      // Optional: Log this session to a new `driver_log` table (see next section)
+      if (state === 'offline') {
+        const logInsert = `
+          INSERT INTO driver_log (users_id, log_date, session_time)
+          VALUES (?, NOW(), ?)
+        `;
+        await pool.query(logInsert, [user_id, onlineDuration]);
       }
   
+      return res.status(200).json({ message: 'Status updated successfully' });
     } catch (error) {
       console.error('Error executing query:', error);
       return res.status(500).json({ message: 'Internal server error' });
     }
   });
+
   
   
 
