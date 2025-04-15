@@ -515,6 +515,25 @@ router.get('/getDriverLog', async (req, res) => {
       res.status(500).json({ error: "Failed to fetch session time" });
     }
   });
+
+  //get driver stats
+  router.get("/getDriverTrips", async (req, res) => {
+    const userId = req.query.userId;
+  
+    try {
+      // Use the promisePool to execute the query
+      const [rows] = await promisePool.execute(`
+        SELECT * FROM trips WHERE statuses IN ('accepted', 'declined') AND user_id = ?
+      `, [userId]);
+  
+      // Return the fetched trips as a JSON response
+      res.json({ trips: rows });
+    } catch (error) {
+      console.error("Error fetching driver trips:", error);
+      res.status(500).send('Server error');
+    }
+  });
+  
   
   
 
