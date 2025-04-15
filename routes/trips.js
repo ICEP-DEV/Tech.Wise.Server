@@ -516,7 +516,7 @@ router.get('/getDriverLog', async (req, res) => {
     }
   });
 
-  //get driver stats
+ 
 // Route to get Driver Trips based on status
 router.get('/getDriverTrips', async (req, res, next) => {
     const userId = req.query.userId;
@@ -546,15 +546,22 @@ router.get('/getDriverTrips', async (req, res, next) => {
             return res.status(404).json({ message: 'No trips found for this driver' });
         }
 
-        // Return the trips if found
-        return res.json({ trips: result });
+        // Calculate average driver rating
+        const ratings = result.map(trip => trip.driver_ratings);
+        const averageRating = ratings.reduce((sum, rating) => sum + parseFloat(rating), 0) / ratings.length;
+        const formattedRating = averageRating.toFixed(1); // Format to 1 decimal place
+
+        // Return the trips with the formatted driver rating
+        return res.json({
+            trips: result,
+            ratings: `${formattedRating}/5`
+        });
     } catch (err) {
         clearTimeout(timeout); // Clear timeout on error
         console.error(`Error fetching trips for driver with userId ${userId}:`, err);
         return res.status(500).json({ message: 'Failed to fetch trips', error: err.message });
     }
 });
-  
   
 
 
