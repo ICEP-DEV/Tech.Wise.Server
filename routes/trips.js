@@ -380,9 +380,9 @@ router.post("/messages", async (req, res) => {
     }
 });
 
-// Put method to update driver state
 router.put('/updateDriverState', async (req, res) => {
-    const { user_id, state } = req.body;
+    const { user_id, state, onlineDuration, last_online_timestamp } = req.body;
+  
     console.log('Updating driver status for user_id:', user_id, 'to state:', state);
     console.log('Received PUT request for /updateDriverState');
     console.log('Request body:', req.body);
@@ -407,8 +407,18 @@ router.put('/updateDriverState', async (req, res) => {
         return res.status(200).json({ message: 'State is already set to the requested value' });
       }
   
-      const updateQuery = `UPDATE driver SET state = ? WHERE users_id = ?`;
-      const [updateResult] = await pool.query(updateQuery, [state, user_id]);
+      // Construct the update query with onlineDuration and last_online_timestamp
+      const updateQuery = `
+      UPDATE driver 
+      SET state = ?, 
+          online_time = ?, 
+          last_online_timestamp = COALESCE(?, NOW()) 
+      WHERE users_id = ?
+    `;
+    
+  
+      const [updateResult] = await pool.query(updateQuery, [state, onlineDuration, last_online_timestamp, user_id]);
+  
       console.log('SQL Update Result:', updateResult);
   
       if (updateResult.affectedRows > 0) {
@@ -423,48 +433,42 @@ router.put('/updateDriverState', async (req, res) => {
     }
   });
   
+  
 
-// Get driver state
-router.get('/getDriverState', async (req, res, next) => {
-    const userId = req.query.userId; // Get userId from query parameters
-    console.log('Fetching driver state for userId:', userId);
-  
-    if (!userId) {
-      return res.status(400).json({ message: 'User ID is required' });
-    }
-  
-    // Set a timeout for this route only
-    const timeout = setTimeout(() => {
-      console.log('Request to get driver state timed out');
-      return res.status(504).send('Gateway Timeout');
-    }, 15000); // Timeout after 15 seconds
-  
-    try {
-      // Query to get the current state of the driver
-      const query = 'SELECT state FROM driver WHERE users_id = ?';
-  
-      // Execute the query using the pool.query method
-      const [result] = await pool.query(query, [userId]);
-  
-      // Clear the timeout once the query finishes
-      clearTimeout(timeout);
-  
-      if (result.length === 0) {
-        return res.status(404).json({ message: 'Driver not found' });
+ 
+  // Get driver state and online_time
+  router.get('/getDriverState', async (req, res, next) => {
+      const userId = req.query.userId;
+      console.log('Fetching driver state for userId:', userId);
+    
+      if (!userId || userId.trim() === '') {
+        return res.status(400).json({ message: 'User ID is required and cannot be empty' });
       }
-  
-      // Return the current state of the driver (online or offline)
-      const driverState = result[0].state;
-      return res.json({ state: driverState });
-    } catch (err) {
-      // Clear the timeout in case of an error
-      clearTimeout(timeout);
-  
-      console.error('Error fetching driver state:', err);
-      return res.status(500).json({ message: 'Failed to fetch driver state', error: err.message });
-    }
-  });
-  
+    
+      const timeout = setTimeout(() => {
+        console.log('Request to get driver state timed out');
+        return res.status(504).send('Gateway Timeout');
+      }, 15000); // 15 seconds
+    
+      try {
+        const query = 'SELECT state, online_time FROM driver WHERE users_id = ?';
+        const [result] = await pool.query(query, [userId]);
+    
+        clearTimeout(timeout);
+    
+        if (result.length === 0) {
+          console.log(`Driver with userId ${userId} not found.`);
+          return res.status(404).json({ message: 'Driver not found' });
+        }
+    
+        const { state, online_time } = result[0];
+        return res.json({ state, online_time });
+      } catch (err) {
+        clearTimeout(timeout);
+        console.error(`Error fetching driver state for userId ${userId}:`, err);
+        return res.status(500).json({ message: 'Failed to fetch driver state', error: err.message });
+      }
+    });
   
   
 
