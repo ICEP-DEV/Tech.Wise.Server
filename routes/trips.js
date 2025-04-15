@@ -397,7 +397,8 @@ router.put('/updateDriverState', async (req, res) => {
   
       // Sum all online time for today
       const timeQuery = `
-        SELECT SUM(online_time) AS totalOnlineTime
+      SELECT SUM(session_time) AS totalOnlineTime
+
         FROM driver_log
         WHERE users_id = ? AND log_date >= ?
       `;
