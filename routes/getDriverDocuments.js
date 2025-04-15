@@ -120,35 +120,33 @@ const uploadFile = async (file) => {
 // Route to upload driver details and documents
 router.post("/driver_details", async (req, res) => {
   try {
-    const { user_id, status, state, URL_payment, online_time, last_online_timestamp, 
-      id_copy, police_clearance, pdpLicense, car_inspection, driver_license } = req.body;
+    const {
+      user_id,
+      status,
+      state,
+      URL_payment,
+      online_time,
+      last_online_timestamp,
+      id_copy,
+      police_clearance,
+      pdpLicense,
+      car_inspection,
+      driver_license
+    } = req.body;
 
     console.log('Request body:', req.body);
 
     // Validate that required fields are provided
-    if (!user_id || !status || !state || !last_online_timestamp || 
-        !id_copy || !police_clearance || !pdpLicense || !car_inspection || !driver_license) {
+    if (
+      !user_id || !status || !state || !last_online_timestamp ||
+      !id_copy || !police_clearance || !pdpLicense || !car_inspection || !driver_license
+    ) {
       return res.status(400).send('All required fields must be provided.');
     }
 
     // Check if the driver details for the given user_id already exist
     const checkQuery = `SELECT * FROM driver WHERE users_id = ?`;
     const [existingDriver] = await pool.query(checkQuery, [user_id]);
-
-    // Prepare the data for either update or insert
-    const queryData = [
-      status, 
-      state, 
-      URL_payment || null, 
-      online_time || null, 
-      last_online_timestamp,
-      id_copy, 
-      police_clearance, 
-      pdpLicense, 
-      car_inspection, 
-      driver_license,
-      user_id // We need the user_id to identify the record in case of an update
-    ];
 
     if (existingDriver.length > 0) {
       // If the driver data already exists, update the record
@@ -166,8 +164,25 @@ router.post("/driver_details", async (req, res) => {
           driver_license = ? 
         WHERE users_id = ?
       `;
-      await pool.query(updateQuery, queryData);
+
+      const updateData = [
+        status,
+        state,
+        URL_payment || null,
+        online_time || null,
+        last_online_timestamp,
+        id_copy,
+        police_clearance,
+        pdpLicense,
+        car_inspection,
+        driver_license,
+        user_id
+      ];
+
+      console.log('Updating driver:', updateData);
+      await pool.query(updateQuery, updateData);
       res.json({ message: "Driver details updated successfully" });
+
     } else {
       // If the driver data does not exist, insert a new record
       const insertQuery = `
@@ -175,14 +190,32 @@ router.post("/driver_details", async (req, res) => {
         (users_id, status, state, URL_payment, online_time, last_online_timestamp, id_copy, police_clearance, pdp, car_inspection, driver_license)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `;
-      await pool.query(insertQuery, queryData);
+
+      const insertData = [
+        user_id,
+        status,
+        state,
+        URL_payment || null,
+        online_time || null,
+        last_online_timestamp,
+        id_copy,
+        police_clearance,
+        pdpLicense,
+        car_inspection,
+        driver_license
+      ];
+
+      console.log('Inserting driver:', insertData);
+      await pool.query(insertQuery, insertData);
       res.json({ message: "Driver details saved successfully" });
     }
+
   } catch (error) {
     console.error("Error while saving driver details:", error);
     res.status(500).json({ message: "Server error while saving driver details" });
   }
 });
+
 
 
 
