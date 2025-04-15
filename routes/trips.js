@@ -535,7 +535,7 @@ router.get('/getDriverTrips', async (req, res, next) => {
 
     try {
         // Query to fetch trips based on status
-        const query = 'SELECT * FROM trips WHERE statuses IN (?, ?) AND user_id = ?';
+        const query = 'SELECT * FROM trips WHERE statuses IN (?, ?) AND driverId = ?';
         const [result] = await pool.query(query, ['accepted', 'declined', userId]);
 
         clearTimeout(timeout); // Clear timeout if the query is successful
