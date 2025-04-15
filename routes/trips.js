@@ -490,6 +490,31 @@ router.put('/updateDriverState', async (req, res) => {
         return res.status(500).json({ message: 'Failed to fetch driver state', error: err.message });
       }
     });
+    // GET /getDriverSessionTime?userId=123
+router.get('/getDriverLog', async (req, res) => {
+    const userId = req.query.userId;
+  
+    if (!userId) return res.status(400).json({ error: "User ID is required" });
+  
+    try {
+      const connection = await pool.getConnection(); // Get connection from pool
+  
+      const [rows] = await connection.query(
+        `SELECT session_time, log_date FROM driver_log WHERE users_id = ? ORDER BY log_date DESC LIMIT 10`,
+        [userId]
+      );
+  
+      connection.release(); // Don't forget to release the connection back to the pool
+  
+      // Optional: Calculate total session time
+      const totalSessionTime = rows.reduce((acc, log) => acc + log.session_time, 0);
+  
+      res.json({ logs: rows, totalSessionTime });
+    } catch (error) {
+      console.error("Error fetching session time:", error);
+      res.status(500).json({ error: "Failed to fetch session time" });
+    }
+  });
   
   
 
