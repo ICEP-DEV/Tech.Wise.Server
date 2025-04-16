@@ -122,27 +122,30 @@ const uploadFile = async (file) => {
   }
 };
 
-// Route
+// Route for car listing
 router.post("/car_listing", upload.single("carImage"), async (req, res) => {
   try {
+    // Log received data
+    console.log("Received request data:", req.body);
+    console.log("Received file:", req.file);
+
     const { carMaker, carModel, carYear, carSeats, carColor, licensePlate, userId } = req.body;
 
-    console.log("🧾 Body data:", req.body);
-    console.log("📷 File info:", req.file);
-
     // Basic validation
-    if (!carMaker || !carModel || !carYear || !carSeats || !carColor || !licensePlate || !req.file || !userId) {
+    if (!carMaker || !carModel || !carYear || !carSeats || !carColor || !licensePlate || !userId || !req.file) {
+      console.log("❌ Missing required fields.");
       return res.status(400).json({ error: "All fields including image are required" });
     }
 
+    // Upload image to Firebase
     const firebaseImageUrl = await uploadFile(req.file);
     console.log("📡 Firebase image URL:", firebaseImageUrl);
 
-    // Check existing car listing
-    console.log("🔍 Checking if car already exists for user:", userId);
+    // Check if the car already exists for the user
     const [existingCar] = await pool.query(`SELECT * FROM car_listing WHERE userId = ?`, [userId]);
 
     if (existingCar.length > 0) {
+      // Update existing car listing
       console.log("🔄 Updating existing car listing");
 
       const updateQuery = `
@@ -161,6 +164,7 @@ router.post("/car_listing", upload.single("carImage"), async (req, res) => {
 
       return res.json({ message: "Car details updated successfully" });
     } else {
+      // Insert new car listing
       console.log("➕ Inserting new car listing");
 
       const insertQuery = `
@@ -179,9 +183,6 @@ router.post("/car_listing", upload.single("carImage"), async (req, res) => {
     return res.status(500).json({ message: "Server error while saving car details" });
   }
 });
-
-module.exports = router;
-
 
 
 // 🚗 **Get Car Listings by User ID**
