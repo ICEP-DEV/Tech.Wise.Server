@@ -40,7 +40,7 @@ const uploadFile = async (file) => {
   }
 };
 
-// Route for car listing (similar structure to driver_details)
+// Route to upload or update car listing
 router.post("/car_listing", async (req, res) => {
   try {
     const {
@@ -51,20 +51,26 @@ router.post("/car_listing", async (req, res) => {
       number_of_seats,
       car_colour,
       license_plate,
-      car_image // this should be a Firebase image URL already uploaded from client
+      car_image
     } = req.body;
 
-    console.log("📨 Received car listing body:", req.body);
+    console.log("🚚 Received car listing:", req.body);
 
-    // Basic validation
+    // Validate required fields
     if (
-      !userId || !car_make || !car_model || !car_year ||
-      !number_of_seats || !car_colour || !license_plate || !car_image
+      !userId ||
+      !car_make ||
+      !car_model ||
+      !car_year ||
+      !number_of_seats ||
+      !car_colour ||
+      !license_plate ||
+      !car_image
     ) {
       return res.status(400).json({ error: "All required fields must be provided." });
     }
 
-    // Check if a car listing already exists for this user
+    // Check if car listing exists
     const checkQuery = `SELECT * FROM car_listing WHERE userId = ?`;
     const [existingCar] = await pool.query(checkQuery, [userId]);
 
@@ -78,8 +84,9 @@ router.post("/car_listing", async (req, res) => {
           number_of_seats = ?, 
           car_colour = ?, 
           license_plate = ?, 
-          car_image = ? 
-        WHERE userId = ?`;
+          car_image = ?
+        WHERE userId = ?
+      `;
 
       const updateData = [
         car_make,
@@ -92,17 +99,17 @@ router.post("/car_listing", async (req, res) => {
         userId
       ];
 
-      console.log("🔁 Updating car:", updateData);
+      console.log("🔄 Updating car listing:", updateData);
       await pool.query(updateQuery, updateData);
-
       return res.json({ message: "Car details updated successfully" });
 
     } else {
       // Insert new car listing
       const insertQuery = `
         INSERT INTO car_listing 
-        (userId, car_make, car_model, car_year, number_of_seats, car_colour, license_plate, car_image) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
+        (userId, car_make, car_model, car_year, number_of_seats, car_colour, license_plate, car_image)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `;
 
       const insertData = [
         userId,
@@ -115,9 +122,8 @@ router.post("/car_listing", async (req, res) => {
         car_image
       ];
 
-      console.log("➕ Inserting new car:", insertData);
+      console.log("➕ Inserting car listing:", insertData);
       await pool.query(insertQuery, insertData);
-
       return res.json({ message: "Car details saved successfully" });
     }
 
@@ -126,6 +132,7 @@ router.post("/car_listing", async (req, res) => {
     return res.status(500).json({ message: "Server error while saving car details" });
   }
 });
+
 
 
 // const express = require("express");
