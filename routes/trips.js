@@ -515,7 +515,53 @@ router.get('/getDriverLog', async (req, res) => {
       res.status(500).json({ error: "Failed to fetch session time" });
     }
   });
-  
+
+ 
+// Route to get Driver Trips based on status
+router.get('/getDriverTrips', async (req, res, next) => {
+    const userId = req.query.userId;
+    console.log('Fetching driver trips for userId:', userId);
+
+    // Validation check for userId
+    if (!userId || userId.trim() === '') {
+        return res.status(400).json({ message: 'User ID is required and cannot be empty' });
+    }
+
+    // Set a timeout for the query to avoid hanging requests
+    const timeout = setTimeout(() => {
+        console.log('Request to get driver trips timed out');
+        return res.status(504).send('Gateway Timeout');
+    }, 15000); // 15 seconds
+
+    try {
+        // Query to fetch trips based on status
+        const query = 'SELECT * FROM trips WHERE statuses IN (?, ?) AND driverId = ?';
+        const [result] = await pool.query(query, ['accepted', 'declined', userId]);
+
+        clearTimeout(timeout); // Clear timeout if the query is successful
+
+        // Check if trips are found
+        if (result.length === 0) {
+            console.log(`No trips found for driver with userId ${userId}`);
+            return res.status(404).json({ message: 'No trips found for this driver' });
+        }
+
+        // Calculate average driver rating
+        const ratings = result.map(trip => trip.driver_ratings);
+        const averageRating = ratings.reduce((sum, rating) => sum + parseFloat(rating), 0) / ratings.length;
+        const formattedRating = averageRating.toFixed(1); // Format to 1 decimal place
+
+        // Return the trips with the formatted driver rating
+        return res.json({
+            trips: result,
+            ratings: `${formattedRating}/5`
+        });
+    } catch (err) {
+        clearTimeout(timeout); // Clear timeout on error
+        console.error(`Error fetching trips for driver with userId ${userId}:`, err);
+        return res.status(500).json({ message: 'Failed to fetch trips', error: err.message });
+    }
+});
   
 
 

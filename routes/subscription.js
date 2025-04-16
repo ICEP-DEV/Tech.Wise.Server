@@ -848,7 +848,9 @@ router.post('/cancel-subscription', async (req, res) => {
   console.log("Subscription Code:", code);
 
   if (!code || !token) {
-    return res.status(400).json({ message: 'Subscription code and token are required' });
+    const response = { message: 'Subscription code and token are required' };
+    console.log('Response:', response);
+    return res.status(400).json(response);
   }
 
   try {
@@ -867,12 +869,16 @@ router.post('/cancel-subscription', async (req, res) => {
 
     // If subscription is already canceled or inactive
     if (subscription.status === 'cancelled' || subscription.status === 'inactive') {
-      return res.status(400).json({ message: 'Subscription is already cancelled or inactive' });
+      const response = { message: 'Subscription is already cancelled or inactive' };
+      console.log('Response:', response);
+      return res.status(400).json(response);
     }
 
     // If subscription is non-renewing, check if it's active or finished
     if (subscription.status === 'non-renewing') {
-      return res.status(400).json({ message: 'Subscription is non-renewing and will expire at the end of the term' });
+      const response = { message: 'Subscription is non-renewing and will expire at the end of the term' };
+      console.log('Response:', response);
+      return res.status(200).json(response);
     }
 
     // Proceed to cancel if active
@@ -890,19 +896,34 @@ router.post('/cancel-subscription', async (req, res) => {
       }
     );
 
-    if (cancelResponse.data.status === 'success') {
-      return res.status(200).json({ message: 'Subscription canceled successfully' });
+    const cancelResult = cancelResponse.data;
+
+    if (cancelResult.status === true && cancelResult.message === 'Subscription disabled successfully') {
+      const response = {
+        message: cancelResult.message,
+        subscription_status: cancelResult.data?.status || 'unknown'
+      };
+      console.log('Response:', response);
+      return res.status(200).json(response);
     } else {
-      return res.status(400).json({ message: 'Failed to cancel subscription', details: cancelResponse.data });
+      const response = {
+        message: 'Failed to cancel subscription',
+        details: cancelResult
+      };
+      console.log('Response:', response);
+      return res.status(400).json(response);
     }
   } catch (error) {
-    console.error('Error canceling subscription:', error.response?.data || error.message);
-    return res.status(500).json({
+    const response = {
       message: 'An error occurred while canceling the subscription',
       error: error.response?.data || error.message
-    });
+    };
+    console.error('Error canceling subscription:', error.response?.data || error.message);
+    console.log('Response:', response);
+    return res.status(500).json(response);
   }
 });
+
 
 
 
