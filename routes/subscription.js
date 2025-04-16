@@ -872,7 +872,7 @@ router.post('/cancel-subscription', async (req, res) => {
 
     // If subscription is non-renewing, check if it's active or finished
     if (subscription.status === 'non-renewing') {
-      return res.status(400).json({ message: 'Subscription is non-renewing and will expire at the end of the term' });
+      return res.status(200).json({ message: 'Subscription is non-renewing and will expire at the end of the term' });
     }
 
     // Proceed to cancel if active
