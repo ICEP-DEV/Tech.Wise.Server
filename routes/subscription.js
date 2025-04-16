@@ -896,12 +896,20 @@ router.post('/cancel-subscription', async (req, res) => {
       }
     );
 
-    if (cancelResponse.data.status === 'success') {
-      const response = { message: 'Subscription canceled successfully' };
+    const cancelResult = cancelResponse.data;
+
+    if (cancelResult.status === true && cancelResult.message === 'Subscription disabled successfully') {
+      const response = {
+        message: cancelResult.message,
+        subscription_status: cancelResult.data?.status || 'unknown'
+      };
       console.log('Response:', response);
       return res.status(200).json(response);
     } else {
-      const response = { message: 'Failed to cancel subscription', details: cancelResponse.data };
+      const response = {
+        message: 'Failed to cancel subscription',
+        details: cancelResult
+      };
       console.log('Response:', response);
       return res.status(400).json(response);
     }
