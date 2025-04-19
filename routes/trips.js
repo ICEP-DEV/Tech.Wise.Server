@@ -100,6 +100,36 @@ router.post('/trips', async (req, res) => {
     }
 });
 
+// Updated Endpoint to fetch all trips by status and driverId
+router.get('/allTrips', async (req, res) => {
+    const status = req.query.status;
+    const driverId = req.query.driverId;
+  
+    let query = `SELECT * FROM trips`;
+    const queryParams = [];
+  
+    // Build WHERE clause
+    if (status && driverId) {
+      query += ` WHERE statuses = ? AND driverId = ?`;
+      queryParams.push(status, driverId);
+    } else if (status) {
+      query += ` WHERE statuses = ?`;
+      queryParams.push(status);
+    } else if (driverId) {
+      query += ` WHERE driverId = ?`;
+      queryParams.push(driverId);
+    }
+  
+    try {
+      const [rows] = await pool.query(query, queryParams);
+      console.log("Fetched Trips with Filters");
+      res.json(rows);
+    } catch (error) {
+      console.error('Error fetching trips:', error);
+      res.status(500).send('Error fetching trips');
+    }
+  });
+
 // Endpoint to fetch trips by user_id and status
 router.get('/tripHistory/:userId', async (req, res) => {
     const userId = req.params.userId;
