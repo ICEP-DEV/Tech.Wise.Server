@@ -237,37 +237,39 @@ router.post("/fetch-subaccount", (req, res) => {
 });
 
 // Get the latest subaccount by user_id
-router.post('/subaccounts', async (req, res) => {
-    const { user_id } = req.body;
-
-    const query = `
-        SELECT * FROM subaccounts 
+router.get('/subaccount', async (req, res) => {
+    const { user_id } = req.query;
+  
+    console.log('Fetching latest subaccount for user_id:', user_id);
+  
+    if (!user_id) {
+      return res.status(400).json({ message: 'User ID is required' });
+    }
+  
+    const sql = `
+        SELECT 
+            id, user_id, subaccount_code, business_name, settlement_bank, 
+            currency, percentage_charge, is_verified, created_at, updated_at 
+        FROM subaccounts 
         WHERE user_id = ? 
         ORDER BY created_at DESC 
         LIMIT 1
     `;
-
+  
     try {
-        const results = await new Promise((resolve, reject) => {
-            pool.query(query, [user_id], (error, results) => {
-                if (error) {
-                    console.log("DB Error:", error);
-                    reject(error);
-                }
-                resolve(results);
-            });
-        });
-
-        if (results.length > 0) {
-            res.status(200).json({ success: true, data: results[0] });
-            console.log("Subaccount data retrieved successfully:", results[0]);
-            
-        } else {
-            res.status(404).json({ success: false, error: "No subaccount found for this user." });
-        }
+      const startTime = Date.now();
+      const [rows] = await pool.query(sql, [user_id]);
+      console.log(`Query executed in ${Date.now() - startTime} ms`);
+  
+      if (rows.length > 0) {
+        res.json({ subaccount: rows[0] });
+      } else {
+        res.status(404).json({ message: 'No subaccount found for this user.' });
+      }
     } catch (error) {
-        res.status(500).json({ success: false, error: "Error fetching subaccount data" });
+      console.error('Error executing query:', error);
+      res.status(500).json({ message: 'Internal server error' });
     }
-});
-
+  });
+  
 module.exports = router;
