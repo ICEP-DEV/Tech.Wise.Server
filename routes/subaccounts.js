@@ -236,11 +236,16 @@ router.post("/fetch-subaccount", (req, res) => {
     request.end();
 });
 
-// Get all subaccount data by user_id
-router.get('/subaccounts', async (req, res) => {
+// Get the latest subaccount by user_id
+router.post('/subaccounts', async (req, res) => {
     const { user_id } = req.body;
 
-    const query = `SELECT * FROM subaccounts WHERE user_id = ?`;
+    const query = `
+        SELECT * FROM subaccounts 
+        WHERE user_id = ? 
+        ORDER BY created_at DESC 
+        LIMIT 1
+    `;
 
     try {
         const results = await new Promise((resolve, reject) => {
@@ -253,9 +258,13 @@ router.get('/subaccounts', async (req, res) => {
             });
         });
 
-        res.status(200).json(results);
+        if (results.length > 0) {
+            res.status(200).json({ success: true, data: results[0] });
+        } else {
+            res.status(404).json({ success: false, error: "No subaccount found for this user." });
+        }
     } catch (error) {
-        res.status(500).json({ message: "Error fetching subaccount data" });
+        res.status(500).json({ success: false, error: "Error fetching subaccount data" });
     }
 });
 
