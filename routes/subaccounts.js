@@ -237,8 +237,8 @@ router.post("/fetch-subaccount", (req, res) => {
 });
 
 // Get all subaccount data by user_id
-router.get('/subaccounts/:user_id', async (req, res) => {
-    const { user_id } = req.params;
+router.get('/subaccounts', async (req, res) => {
+    const { user_id } = req.body;
 
     const query = `SELECT * FROM subaccounts WHERE user_id = ?`;
 
