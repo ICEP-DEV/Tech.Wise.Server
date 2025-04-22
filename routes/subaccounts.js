@@ -251,7 +251,7 @@ router.post('/subaccounts', async (req, res) => {
         const results = await new Promise((resolve, reject) => {
             pool.query(query, [user_id], (error, results) => {
                 if (error) {
-                    console.error("DB Error:", error);
+                    console.log("DB Error:", error);
                     reject(error);
                 }
                 resolve(results);
@@ -260,6 +260,8 @@ router.post('/subaccounts', async (req, res) => {
 
         if (results.length > 0) {
             res.status(200).json({ success: true, data: results[0] });
+            console.log("Subaccount data retrieved successfully:", results[0]);
+            
         } else {
             res.status(404).json({ success: false, error: "No subaccount found for this user." });
         }
