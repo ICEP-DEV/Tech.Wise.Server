@@ -271,5 +271,118 @@ router.get('/subaccount', async (req, res) => {
       res.status(500).json({ message: 'Internal server error' });
     }
   });
-  
+
+// Update subaccount endpoint
+router.post("/update-subaccount", (req, res) => {
+    const { subaccountCode, updateData } = req.body;
+
+    if (!subaccountCode || !updateData) {
+        return res.status(400).json({
+            error: "subaccountCode and updateData are required."
+        });
+    }
+
+    const params = JSON.stringify(updateData);
+
+    const options = {
+        hostname: 'api.paystack.co',
+        port: 443,
+        path: `/subaccount/${subaccountCode}`,
+        method: 'PUT',
+        headers: {
+            Authorization: `Bearer ${PAYSTACK_SECRET_KEY}`,
+            'Content-Type': 'application/json'
+        }
+    };
+
+    const request = https.request(options, (response) => {
+        let data = '';
+
+        response.on('data', (chunk) => {
+            data += chunk;
+        });
+
+        response.on('end', () => {
+            const responseData = JSON.parse(data);
+
+            if (responseData.status) {
+                return res.status(200).json({
+                    success: true,
+                    message: "Subaccount updated successfully",
+                    data: responseData.data
+                });
+            } else {
+                return res.status(400).json({
+                    success: false,
+                    message: responseData.message || "Failed to update subaccount",
+                    data: responseData
+                });
+            }
+        });
+    });
+
+    request.on('error', (error) => {
+        console.error("Error:", error);
+        return res.status(500).json({
+            error: error.message || "Internal Server Error"
+        });
+    });
+
+    request.write(params);
+    request.end();
+});
+
+
+// Delete subaccount endpoint
+router.delete('/delete-subaccount', (req, res) => {
+    const { subaccountCode } = req.query;
+
+    if (!subaccountCode) {
+        return res.status(400).json({ error: 'subaccountCode is required' });
+    }
+
+    const options = {
+        hostname: 'api.paystack.co',
+        port: 443,
+        path: `/subaccount/${subaccountCode}`,
+        method: 'DELETE',
+        headers: {
+            Authorization: `Bearer ${PAYSTACK_SECRET_KEY}`,
+        }
+    };
+
+    const request = https.request(options, (response) => {
+        let data = '';
+
+        response.on('data', (chunk) => {
+            data += chunk;
+        });
+
+        response.on('end', () => {
+            const parsed = JSON.parse(data);
+
+            if (parsed.status) {
+                return res.status(200).json({
+                    success: true,
+                    message: 'Subaccount deleted successfully',
+                    data: parsed.data
+                });
+            } else {
+                return res.status(400).json({
+                    success: false,
+                    message: parsed.message || 'Failed to delete subaccount'
+                });
+            }
+        });
+    });
+
+    request.on('error', (error) => {
+        console.error('Error deleting subaccount:', error);
+        return res.status(500).json({ error: error.message || 'Internal server error' });
+    });
+
+    request.end();
+});
+
+
 module.exports = router;
