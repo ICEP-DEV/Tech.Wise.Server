@@ -268,7 +268,7 @@ router.get('/subaccount', async (req, res) => {
     }
 });
 
-// Update subaccount endpoint
+// Update subaccount endpoint paystack and mysql
 router.put("/update-subaccount", (req, res) => {
     const {
       subaccount_code,
@@ -321,18 +321,52 @@ router.put("/update-subaccount", (req, res) => {
         data += chunk;
       });
   
-      response.on("end", () => {
+      response.on("end", async () => {
         console.log("📩 Raw Paystack Response:", data);
   
         const responseData = JSON.parse(data);
   
         if (responseData.status) {
           console.log("✅ Subaccount updated successfully on Paystack");
-          return res.status(200).json({
-            success: true,
-            message: "Subaccount updated successfully",
-            data: responseData.data,
-          });
+  
+          // Proceed to update your MySQL DB
+          const sql = `
+            UPDATE subaccounts 
+            SET 
+              business_name = ?, 
+              settlement_bank = ?, 
+              account_number = ?, 
+              bank_code = ?, 
+              percentage_charge = ?, 
+              updated_at = NOW()
+            WHERE subaccount_code = ?
+          `;
+  
+          try {
+            const [result] = await pool.query(sql, [
+              business_name,
+              settlement_bank,
+              account_number,
+              bank_code,
+              percentage_charge,
+              subaccount_code,
+            ]);
+  
+            console.log("✅ MySQL Update Result:", result);
+  
+            return res.status(200).json({
+              success: true,
+              message: "Subaccount updated successfully in Paystack and database",
+              data: responseData.data,
+            });
+          } catch (dbError) {
+            console.error("💥 Error updating MySQL:", dbError);
+            return res.status(500).json({
+              success: false,
+              message: "Subaccount updated in Paystack but failed to update database",
+              error: dbError.message,
+            });
+          }
         } else {
           console.log("⚠️ Failed to update subaccount on Paystack:", responseData);
           return res.status(400).json({
@@ -354,6 +388,7 @@ router.put("/update-subaccount", (req, res) => {
     request.write(params);
     request.end();
   });
+  
   
 
 
