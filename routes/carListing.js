@@ -41,9 +41,9 @@ const uploadFile = async (file) => {
 };
 
 
-
 router.post("/car_listing", async (req, res) => {
   try {
+    console.log("🚚 Request received to save car listing...");
     const {
       userId,
       car_make,
@@ -56,7 +56,7 @@ router.post("/car_listing", async (req, res) => {
       class: carClass
     } = req.body;
 
-    console.log("🚚 Received body:", req.body);
+    console.log("🚚 Request body:", req.body);
 
     const missingFields = [];
     if (!userId) missingFields.push("userId");
@@ -80,62 +80,20 @@ router.post("/car_listing", async (req, res) => {
     const checkQuery = `SELECT * FROM car_listing WHERE userId = ?`;
     const [existingCar] = await pool.query(checkQuery, [userId]);
 
-    console.log("🔍 Checking if the car already exists for userId:", userId);
-
     if (existingCar.length > 0) {
-      const updateQuery = `
-        UPDATE car_listing SET 
-          car_make = ?, 
-          car_model = ?, 
-          car_year = ?, 
-          number_of_seats = ?, 
-          car_colour = ?, 
-          license_plate = ?, 
-          car_image = ?,
-          \`class\` = ?
-        WHERE userId = ?
-      `;
-
-      const updateData = [
-        car_make,
-        car_model,
-        car_year,
-        number_of_seats,
-        car_colour,
-        license_plate,
-        car_image,
-        carClass,
-        userId
-      ];
-
-      console.log("📝 Update query data:", updateData);
+      const updateQuery = `UPDATE car_listing SET car_make = ?, car_model = ?, car_year = ?, number_of_seats = ?, car_colour = ?, license_plate = ?, car_image = ?, \`class\` = ? WHERE userId = ?`;
+      const updateData = [car_make, car_model, car_year, number_of_seats, car_colour, license_plate, car_image, carClass, userId];
+      console.log("🔄 Updating car listing:", updateData);
       await pool.query(updateQuery, updateData);
-      console.log("✅ Car details updated successfully!");
       return res.json({ message: "Car details updated successfully" });
     } else {
-      const insertQuery = `
-        INSERT INTO car_listing 
-        (userId, car_make, car_model, car_year, number_of_seats, car_colour, license_plate, car_image, \`class\`)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `;
-
-      const insertData = [
-        userId,
-        car_make,
-        car_model,
-        car_year,
-        number_of_seats,
-        car_colour,
-        license_plate,
-        car_image,
-        carClass || null
-      ];
-
-      console.log("📝 Insert query data:", insertData);
+      const insertQuery = `INSERT INTO car_listing (userId, car_make, car_model, car_year, number_of_seats, car_colour, license_plate, car_image, \`class\`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+      const insertData = [userId, car_make, car_model, car_year, number_of_seats, car_colour, license_plate, car_image, carClass];
+      console.log("➕ Inserting new car listing:", insertData);
       await pool.query(insertQuery, insertData);
-      console.log("✅ Car details saved successfully!");
       return res.json({ message: "Car details saved successfully" });
     }
+
   } catch (error) {
     console.error("❌ Server error:", error);
     return res.status(500).json({ message: "Server error" });
