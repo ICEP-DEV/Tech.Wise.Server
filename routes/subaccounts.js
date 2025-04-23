@@ -336,7 +336,7 @@ router.post("/update-subaccount", (req, res) => {
 // Delete subaccount endpoint
 router.delete('/delete-subaccount', (req, res) => {
     const { subaccountCode } = req.query;
-    console.log(`Request to delete subaccount: ${subaccountCode}`); // Log the request for debugging
+    console.log(`Request to delete subaccount: ${subaccountCode}`);
 
     if (!subaccountCode) {
         return res.status(400).json({ error: 'subaccountCode is required' });
@@ -360,19 +360,28 @@ router.delete('/delete-subaccount', (req, res) => {
         });
 
         response.on('end', () => {
-            const parsed = JSON.parse(data);
+            try {
+                if (!data) {
+                    return res.status(500).json({ error: 'Empty response from Paystack' });
+                }
 
-            if (parsed.status) {
-                return res.status(200).json({
-                    success: true,
-                    message: 'Subaccount deleted successfully',
-                    data: parsed.data
-                });
-            } else {
-                return res.status(400).json({
-                    success: false,
-                    message: parsed.message || 'Failed to delete subaccount'
-                });
+                const parsed = JSON.parse(data);
+
+                if (parsed.status) {
+                    return res.status(200).json({
+                        success: true,
+                        message: 'Subaccount deleted successfully',
+                        data: parsed.data
+                    });
+                } else {
+                    return res.status(400).json({
+                        success: false,
+                        message: parsed.message || 'Failed to delete subaccount'
+                    });
+                }
+            } catch (parseError) {
+                console.error('Error parsing Paystack response:', parseError);
+                return res.status(500).json({ error: 'Invalid response from Paystack' });
             }
         });
     });
