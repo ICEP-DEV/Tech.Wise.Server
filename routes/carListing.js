@@ -142,6 +142,9 @@ const pool = require("./your-db-connection");
 
 router.post("/car_listing", async (req, res) => {
   try {
+    // Log the received body to verify the data
+    console.log("🚚 Received body:", req.body);
+
     const {
       userId,
       car_make,
@@ -154,8 +157,7 @@ router.post("/car_listing", async (req, res) => {
       class: carClass
     } = req.body;
 
-    console.log("🚚 Received body:", req.body);
-
+    // Check for missing fields
     const missingFields = [];
     if (!userId) missingFields.push("userId");
     if (!car_make) missingFields.push("car_make");
@@ -175,10 +177,14 @@ router.post("/car_listing", async (req, res) => {
       });
     }
 
+    // Check if the car already exists for the user
+    console.log("🔍 Checking if the car already exists for userId:", userId);
     const checkQuery = `SELECT * FROM car_listing WHERE userId = ?`;
     const [existingCar] = await pool.query(checkQuery, [userId]);
 
     if (existingCar.length > 0) {
+      // If car exists, update the details
+      console.log("🔄 Car exists, updating details...");
       const updateQuery = `
         UPDATE car_listing SET 
           car_make = ?, 
@@ -204,10 +210,13 @@ router.post("/car_listing", async (req, res) => {
         userId
       ];
 
-      console.log("🔄 Updating:", updateData);
+      console.log("📝 Update query data:", updateData);
       await pool.query(updateQuery, updateData);
+      console.log("✅ Car details updated successfully!");
       return res.json({ message: "Car details updated successfully" });
     } else {
+      // If car doesn't exist, insert a new record
+      console.log("➕ Car does not exist, inserting new record...");
       const insertQuery = `
         INSERT INTO car_listing 
         (userId, car_make, car_model, car_year, number_of_seats, car_colour, license_plate, car_image, \`class\`)
@@ -223,19 +232,21 @@ router.post("/car_listing", async (req, res) => {
         car_colour,
         license_plate,
         car_image,
-        carClass
+        carClass || null // Handle null if class is not provided
       ];
 
-      console.log("➕ Inserting:", insertData);
+      console.log("📝 Insert query data:", insertData);
       await pool.query(insertQuery, insertData);
+      console.log("✅ Car details saved successfully!");
       return res.json({ message: "Car details saved successfully" });
     }
-
   } catch (error) {
+    // Log any error that occurs
     console.error("❌ Server error:", error);
     return res.status(500).json({ message: "Server error" });
   }
 });
+
 
 module.exports = router;
 
