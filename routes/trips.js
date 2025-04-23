@@ -594,6 +594,7 @@ router.get('/getDriverTrips', async (req, res) => {
     }
 });
   
+//endpoint to fetch all trips
 
 
 
