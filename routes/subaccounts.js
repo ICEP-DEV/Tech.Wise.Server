@@ -108,10 +108,6 @@ router.get("/resolve-account", async (req, res) => {
     }
 });
 
-
-
-
-// Validate Bank Account Endpoint
 // Validate Bank Account Endpoint (POST)
 router.post("/verify-subaccount", async (req, res) => {
     const { subaccountCode, bank_code, country_code, account_name, account_number } = req.body; // Extract parameters from the body
@@ -235,4 +231,165 @@ router.post("/fetch-subaccount", (req, res) => {
 
     request.end();
 });
+
+// Get the latest subaccount by user_id
+router.get('/subaccount', async (req, res) => {
+    const { user_id } = req.query;
+
+    console.log('Fetching latest subaccount for user_id:', user_id);
+
+    if (!user_id) {
+        return res.status(400).json({ message: 'User ID is required' });
+    }
+
+    const sql = `
+        SELECT 
+            id, user_id, subaccount_code, business_name, settlement_bank, 
+            currency, percentage_charge, is_verified, created_at, updated_at 
+        FROM subaccounts 
+        WHERE user_id = ? 
+        ORDER BY created_at DESC 
+        LIMIT 1
+    `;
+
+    try {
+        const startTime = Date.now();
+        const [rows] = await pool.query(sql, [user_id]);
+        console.log(`Query executed in ${Date.now() - startTime} ms`);
+
+        if (rows.length > 0) {
+            res.json({ subaccount: rows[0] });
+        } else {
+            res.status(404).json({ message: 'No subaccount found for this user.' });
+        }
+    } catch (error) {
+        console.error('Error executing query:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+});
+
+// Update subaccount endpoint paystack and mysql
+router.put("/update-subaccount", (req, res) => {
+    const {
+      subaccount_code,
+      business_name,
+      settlement_bank,
+      account_number,
+      bank_code,
+      percentage_charge,
+    } = req.body;
+  
+    console.log("🔔 Incoming PUT /update-subaccount request");
+    console.log("📦 Request Body:", req.body);
+  
+    if (!subaccount_code) {
+      console.log("❌ Missing subaccount_code in request");
+      return res.status(400).json({
+        error: "subaccount_code is required.",
+      });
+    }
+  
+    const updateData = {
+      business_name,
+      settlement_bank,
+      account_number,
+      bank_code,
+      percentage_charge,
+    };
+  
+    const params = JSON.stringify(updateData);
+  
+    console.log("📤 Payload to Paystack:", params);
+  
+    const options = {
+      hostname: "api.paystack.co",
+      port: 443,
+      path: `/subaccount/${subaccount_code}`,
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${PAYSTACK_SECRET_KEY}`,
+        "Content-Type": "application/json",
+      },
+    };
+  
+    const request = https.request(options, (response) => {
+      let data = "";
+  
+      console.log("🔗 Request sent to Paystack");
+  
+      response.on("data", (chunk) => {
+        data += chunk;
+      });
+  
+      response.on("end", async () => {
+        console.log("📩 Raw Paystack Response:", data);
+  
+        const responseData = JSON.parse(data);
+  
+        if (responseData.status) {
+          console.log("✅ Subaccount updated successfully on Paystack");
+  
+          // Proceed to update your MySQL DB
+          const sql = `
+            UPDATE subaccounts 
+            SET 
+              business_name = ?, 
+              settlement_bank = ?, 
+              account_number = ?, 
+              bank_code = ?, 
+              percentage_charge = ?, 
+              updated_at = NOW()
+            WHERE subaccount_code = ?
+          `;
+  
+          try {
+            const [result] = await pool.query(sql, [
+              business_name,
+              settlement_bank,
+              account_number,
+              bank_code,
+              percentage_charge,
+              subaccount_code,
+            ]);
+  
+            console.log("✅ MySQL Update Result:", result);
+  
+            return res.status(200).json({
+              success: true,
+              message: "Subaccount updated successfully in Paystack and database",
+              data: responseData.data,
+            });
+          } catch (dbError) {
+            console.error("💥 Error updating MySQL:", dbError);
+            return res.status(500).json({
+              success: false,
+              message: "Subaccount updated in Paystack but failed to update database",
+              error: dbError.message,
+            });
+          }
+        } else {
+          console.log("⚠️ Failed to update subaccount on Paystack:", responseData);
+          return res.status(400).json({
+            success: false,
+            message: responseData.message || "Failed to update subaccount",
+            data: responseData,
+          });
+        }
+      });
+    });
+  
+    request.on("error", (error) => {
+      console.error("💥 Error during Paystack request:", error);
+      return res.status(500).json({
+        error: error.message || "Internal Server Error",
+      });
+    });
+  
+    request.write(params);
+    request.end();
+  });
+  
+  
+
+
 module.exports = router;

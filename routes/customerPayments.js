@@ -71,5 +71,28 @@ router.post('/payment', async (req, res) => {
   }
 });
 
+// Endpoint to fetch payment details for a specific trip
+router.get('/payment/:tripId', async (req, res) => {
+  const tripId = req.params.tripId;
+
+  const query = `
+    SELECT * FROM payment
+    WHERE tripId = ?
+  `;
+
+  try {
+    const [rows] = await pool.query(query, [tripId]);
+
+    if (rows.length === 0) {
+      return res.status(404).json({ message: 'Payment not found for this trip' });
+    }
+
+    console.log("Fetched payment for tripId:", tripId);
+    res.json(rows[0]); // return a single payment record
+  } catch (error) {
+    console.error('Error fetching payment data:', error);
+    res.status(500).send('Error fetching payment');
+  }
+});
 
 module.exports = router;

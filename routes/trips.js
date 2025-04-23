@@ -100,6 +100,36 @@ router.post('/trips', async (req, res) => {
     }
 });
 
+// Updated Endpoint to fetch all trips by status and driverId
+router.get('/allTrips', async (req, res) => {
+    const status = req.query.status;
+    const driverId = req.query.driverId;
+  
+    let query = `SELECT * FROM trips`;
+    const queryParams = [];
+  
+    // Build WHERE clause
+    if (status && driverId) {
+      query += ` WHERE statuses = ? AND driverId = ?`;
+      queryParams.push(status, driverId);
+    } else if (status) {
+      query += ` WHERE statuses = ?`;
+      queryParams.push(status);
+    } else if (driverId) {
+      query += ` WHERE driverId = ?`;
+      queryParams.push(driverId);
+    }
+  
+    try {
+      const [rows] = await pool.query(query, queryParams);
+      console.log("Fetched Trips with Filters");
+      res.json(rows);
+    } catch (error) {
+      console.error('Error fetching trips:', error);
+      res.status(500).send('Error fetching trips');
+    }
+  });
+
 // Endpoint to fetch trips by user_id and status
 router.get('/tripHistory/:userId', async (req, res) => {
     const userId = req.params.userId;
@@ -458,7 +488,7 @@ router.put('/updateDriverState', async (req, res) => {
 
  
   // Get driver state and online_time
-  router.get('/getDriverState', async (req, res, next) => {
+  router.get('/getDriverState', async (req, res) => {
       const userId = req.query.userId;
       console.log('Fetching driver state for userId:', userId);
     
@@ -490,7 +520,8 @@ router.put('/updateDriverState', async (req, res) => {
         return res.status(500).json({ message: 'Failed to fetch driver state', error: err.message });
       }
     });
-    // GET /getDriverSessionTime?userId=123
+
+// Endpoint to fetch driver log 
 router.get('/getDriverLog', async (req, res) => {
     const userId = req.query.userId;
   
@@ -518,7 +549,7 @@ router.get('/getDriverLog', async (req, res) => {
 
  
 // Route to get Driver Trips based on status
-router.get('/getDriverTrips', async (req, res, next) => {
+router.get('/getDriverTrips', async (req, res) => {
     const userId = req.query.userId;
     console.log('Fetching driver trips for userId:', userId);
 
