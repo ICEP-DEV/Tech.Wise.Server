@@ -239,13 +239,13 @@ router.post("/fetch-subaccount", (req, res) => {
 // Get the latest subaccount by user_id
 router.get('/subaccount', async (req, res) => {
     const { user_id } = req.query;
-  
+
     console.log('Fetching latest subaccount for user_id:', user_id);
-  
+
     if (!user_id) {
-      return res.status(400).json({ message: 'User ID is required' });
+        return res.status(400).json({ message: 'User ID is required' });
     }
-  
+
     const sql = `
         SELECT 
             id, user_id, subaccount_code, business_name, settlement_bank, 
@@ -255,22 +255,22 @@ router.get('/subaccount', async (req, res) => {
         ORDER BY created_at DESC 
         LIMIT 1
     `;
-  
+
     try {
-      const startTime = Date.now();
-      const [rows] = await pool.query(sql, [user_id]);
-      console.log(`Query executed in ${Date.now() - startTime} ms`);
-  
-      if (rows.length > 0) {
-        res.json({ subaccount: rows[0] });
-      } else {
-        res.status(404).json({ message: 'No subaccount found for this user.' });
-      }
+        const startTime = Date.now();
+        const [rows] = await pool.query(sql, [user_id]);
+        console.log(`Query executed in ${Date.now() - startTime} ms`);
+
+        if (rows.length > 0) {
+            res.json({ subaccount: rows[0] });
+        } else {
+            res.status(404).json({ message: 'No subaccount found for this user.' });
+        }
     } catch (error) {
-      console.error('Error executing query:', error);
-      res.status(500).json({ message: 'Internal server error' });
+        console.error('Error executing query:', error);
+        res.status(500).json({ message: 'Internal server error' });
     }
-  });
+});
 
 // Update subaccount endpoint
 router.post("/update-subaccount", (req, res) => {
@@ -336,6 +336,7 @@ router.post("/update-subaccount", (req, res) => {
 // Delete subaccount endpoint
 router.delete('/delete-subaccount', (req, res) => {
     const { subaccountCode } = req.query;
+    console.log(`Request to delete subaccount: ${subaccountCode}`); // Log the request for debugging
 
     if (!subaccountCode) {
         return res.status(400).json({ error: 'subaccountCode is required' });
