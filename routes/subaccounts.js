@@ -335,7 +335,6 @@ router.put("/update-subaccount", (req, res) => {
             SET 
               business_name = ?, 
               settlement_bank = ?, 
-              bank_code = ?, 
               percentage_charge = ?, 
               updated_at = NOW()
             WHERE subaccount_code = ?
@@ -345,7 +344,6 @@ router.put("/update-subaccount", (req, res) => {
             const [result] = await pool.query(sql, [
               business_name,
               settlement_bank,
-              bank_code,
               percentage_charge,
               subaccount_code,
             ]);
