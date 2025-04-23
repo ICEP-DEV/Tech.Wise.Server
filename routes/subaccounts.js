@@ -336,7 +336,7 @@ router.post("/update-subaccount", (req, res) => {
 // Delete subaccount endpoint
 router.delete('/delete-subaccount', (req, res) => {
     const { subaccountCode } = req.query;
-    console.log(`Request to delete subaccount: ${subaccountCode}`);
+    console.log(`Incoming request to delete subaccount: ${subaccountCode}`);
 
     if (!subaccountCode) {
         return res.status(400).json({ error: 'subaccountCode is required' });
@@ -353,46 +353,57 @@ router.delete('/delete-subaccount', (req, res) => {
     };
 
     const request = https.request(options, (response) => {
+        console.log(`Paystack response status: ${response.statusCode}`);
+        console.log('Response headers:', response.headers);
+
         let data = '';
 
         response.on('data', (chunk) => {
+            console.log('Received chunk:', chunk.toString());
             data += chunk;
         });
 
         response.on('end', () => {
+            console.log('Full response body from Paystack:', data);
+
             try {
                 if (!data) {
-                    return res.status(500).json({ error: 'Empty response from Paystack' });
+                    console.error('No response body from Paystack.');
+                    return res.status(502).json({ error: 'Empty response from Paystack' });
                 }
 
                 const parsed = JSON.parse(data);
 
                 if (parsed.status) {
+                    console.log('Subaccount deleted successfully:', parsed.data);
                     return res.status(200).json({
                         success: true,
                         message: 'Subaccount deleted successfully',
                         data: parsed.data
                     });
                 } else {
+                    console.warn('Paystack deletion failed:', parsed);
                     return res.status(400).json({
                         success: false,
-                        message: parsed.message || 'Failed to delete subaccount'
+                        message: parsed.message || 'Failed to delete subaccount',
+                        raw: parsed
                     });
                 }
             } catch (parseError) {
                 console.error('Error parsing Paystack response:', parseError);
-                return res.status(500).json({ error: 'Invalid response from Paystack' });
+                return res.status(500).json({ error: 'Invalid response from Paystack', raw: data });
             }
         });
     });
 
     request.on('error', (error) => {
-        console.error('Error deleting subaccount:', error);
+        console.error('HTTPS error when deleting subaccount:', error);
         return res.status(500).json({ error: error.message || 'Internal server error' });
     });
 
     request.end();
 });
+
 
 
 module.exports = router;
