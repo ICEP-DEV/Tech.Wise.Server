@@ -273,64 +273,93 @@ router.get('/subaccount', async (req, res) => {
 });
 
 // Update subaccount endpoint
-router.post("/update-subaccount", (req, res) => {
-    const { subaccountCode, updateData } = req.body;
-
-    if (!subaccountCode || !updateData) {
-        return res.status(400).json({
-            error: "subaccountCode and updateData are required."
-        });
+router.put("/update-subaccount", (req, res) => {
+    const {
+      subaccount_code,
+      business_name,
+      settlement_bank,
+      account_number,
+      bank_code,
+      percentage_charge,
+    } = req.body;
+  
+    console.log("🔔 Incoming PUT /update-subaccount request");
+    console.log("📦 Request Body:", req.body);
+  
+    if (!subaccount_code) {
+      console.log("❌ Missing subaccount_code in request");
+      return res.status(400).json({
+        error: "subaccount_code is required.",
+      });
     }
-
-    const params = JSON.stringify(updateData);
-
-    const options = {
-        hostname: 'api.paystack.co',
-        port: 443,
-        path: `/subaccount/${subaccountCode}`,
-        method: 'PUT',
-        headers: {
-            Authorization: `Bearer ${PAYSTACK_SECRET_KEY}`,
-            'Content-Type': 'application/json'
-        }
+  
+    const updateData = {
+      business_name,
+      settlement_bank,
+      account_number,
+      bank_code,
+      percentage_charge,
     };
-
+  
+    const params = JSON.stringify(updateData);
+  
+    console.log("📤 Payload to Paystack:", params);
+  
+    const options = {
+      hostname: "api.paystack.co",
+      port: 443,
+      path: `/subaccount/${subaccount_code}`,
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${PAYSTACK_SECRET_KEY}`,
+        "Content-Type": "application/json",
+      },
+    };
+  
     const request = https.request(options, (response) => {
-        let data = '';
-
-        response.on('data', (chunk) => {
-            data += chunk;
-        });
-
-        response.on('end', () => {
-            const responseData = JSON.parse(data);
-
-            if (responseData.status) {
-                return res.status(200).json({
-                    success: true,
-                    message: "Subaccount updated successfully",
-                    data: responseData.data
-                });
-            } else {
-                return res.status(400).json({
-                    success: false,
-                    message: responseData.message || "Failed to update subaccount",
-                    data: responseData
-                });
-            }
-        });
+      let data = "";
+  
+      console.log("🔗 Request sent to Paystack");
+  
+      response.on("data", (chunk) => {
+        data += chunk;
+      });
+  
+      response.on("end", () => {
+        console.log("📩 Raw Paystack Response:", data);
+  
+        const responseData = JSON.parse(data);
+  
+        if (responseData.status) {
+          console.log("✅ Subaccount updated successfully on Paystack");
+          return res.status(200).json({
+            success: true,
+            message: "Subaccount updated successfully",
+            data: responseData.data,
+          });
+        } else {
+          console.log("⚠️ Failed to update subaccount on Paystack:", responseData);
+          return res.status(400).json({
+            success: false,
+            message: responseData.message || "Failed to update subaccount",
+            data: responseData,
+          });
+        }
+      });
     });
-
-    request.on('error', (error) => {
-        console.error("Error:", error);
-        return res.status(500).json({
-            error: error.message || "Internal Server Error"
-        });
+  
+    request.on("error", (error) => {
+      console.error("💥 Error during Paystack request:", error);
+      return res.status(500).json({
+        error: error.message || "Internal Server Error",
+      });
     });
-
+  
     request.write(params);
     request.end();
-});
+  });
+  
+  
 
 
 // Delete subaccount endpoint
