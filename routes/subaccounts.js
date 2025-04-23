@@ -345,7 +345,6 @@ router.put("/update-subaccount", (req, res) => {
             const [result] = await pool.query(sql, [
               business_name,
               settlement_bank,
-              account_number,
               bank_code,
               percentage_charge,
               subaccount_code,
