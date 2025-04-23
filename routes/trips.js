@@ -488,7 +488,7 @@ router.put('/updateDriverState', async (req, res) => {
 
  
   // Get driver state and online_time
-  router.get('/getDriverState', async (req, res, next) => {
+  router.get('/getDriverState', async (req, res) => {
       const userId = req.query.userId;
       console.log('Fetching driver state for userId:', userId);
     
@@ -520,7 +520,8 @@ router.put('/updateDriverState', async (req, res) => {
         return res.status(500).json({ message: 'Failed to fetch driver state', error: err.message });
       }
     });
-    // GET /getDriverSessionTime?userId=123
+
+// Endpoint to fetch driver log 
 router.get('/getDriverLog', async (req, res) => {
     const userId = req.query.userId;
   
@@ -548,7 +549,7 @@ router.get('/getDriverLog', async (req, res) => {
 
  
 // Route to get Driver Trips based on status
-router.get('/getDriverTrips', async (req, res, next) => {
+router.get('/getDriverTrips', async (req, res) => {
     const userId = req.query.userId;
     console.log('Fetching driver trips for userId:', userId);
 
