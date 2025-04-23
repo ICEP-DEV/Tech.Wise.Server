@@ -335,7 +335,6 @@ router.put("/update-subaccount", (req, res) => {
             SET 
               business_name = ?, 
               settlement_bank = ?, 
-              account_number = ?, 
               bank_code = ?, 
               percentage_charge = ?, 
               updated_at = NOW()
