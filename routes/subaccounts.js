@@ -55,17 +55,17 @@ router.post("/create-subaccount", async (req, res) => {
 
 // Store subaccount details into the database using connection pool
 router.post('/store-subaccount', async (req, res) => {
-    const { user_id, subaccount_code, business_name, settlement_bank, currency, percentage_charge, active, created_at, updated_at } = req.body;
+    const { user_id, subaccount_code, business_name, settlement_bank, currency, percentage_charge, is_verified, created_at, updated_at } = req.body;
 
     const query = `INSERT INTO subaccounts (user_id, subaccount_code, business_name, settlement_bank, currency, percentage_charge, is_verified, created_at, updated_at) 
                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
     try {
         await new Promise((resolve, reject) => {
-            pool.query(query, [user_id, subaccount_code, business_name, settlement_bank, currency, percentage_charge, active, created_at, updated_at], (error, results) => {
+            pool.query(query, [user_id, subaccount_code, business_name, settlement_bank, currency, percentage_charge, is_verified, created_at, updated_at], (error, results) => {
                 if (error) {
                     console.error("DB Error:", error);
-                    reject(erroractive
+                    reject(error);
                 }
                 resolve(results);
             });
