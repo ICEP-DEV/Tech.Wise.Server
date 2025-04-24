@@ -56,5 +56,35 @@ router.post('/update-profile-picture', async (req, res) => {
         return res.status(500).json({ message: 'Internal server error' });
     }
 });
-
+// Endpoint to update customer data
+router.put('/update-customer', async (req, res) => {
+    const { user_id, ...fieldsToUpdate } = req.body;
+  
+    console.log("📝 Customer update request for user ID:", user_id, "Fields:", fieldsToUpdate);
+  
+    if (!user_id || Object.keys(fieldsToUpdate).length === 0) {
+      return res.status(400).json({ message: 'User ID and at least one field are required' });
+    }
+  
+    try {
+      // Build SET clause dynamically
+      const setClauses = Object.keys(fieldsToUpdate).map(field => `${field} = ?`).join(', ');
+      const values = Object.values(fieldsToUpdate);
+  
+      const query = `UPDATE users SET ${setClauses} WHERE id = ?`;
+      values.push(user_id); // Add user_id as the last parameter
+  
+      const [result] = await pool.query(query, values);
+  
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ message: 'User not found or no change made' });
+      }
+  
+      return res.status(200).json({ message: 'Customer details updated successfully' });
+    } catch (error) {
+      console.error("❌ Error updating customer details:", error);
+      return res.status(500).json({ message: 'Internal server error' });
+    }
+  });
+  
 module.exports = router;
