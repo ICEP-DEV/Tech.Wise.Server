@@ -130,14 +130,14 @@ router.get('/allTrips', async (req, res) => {
     }
   });
 
-// Endpoint to fetch trips by user_id and status
+// Endpoint to fetch trips by custoer or driver id and status
 router.get('/tripHistory/:userId', async (req, res) => {
     const userId = req.params.userId;
     const status = req.query.status;
   
     let query = `
       SELECT * FROM trips
-      WHERE customerId = ?
+      WHERE customerId OR driverId = ?
     `;
     const queryParams = [userId];
   
