@@ -436,6 +436,8 @@ router.put('/updateDriverState', async (req, res) => {
           return res.status(200).json({ message: 'Already in requested state' });
       }
 
+      let sessionSeconds = 0; // Default value for sessionSeconds
+
       // 3. Handle state transition
       if (state === 'online') {
           if (online_time >= 43200) {
@@ -450,11 +452,13 @@ router.put('/updateDriverState', async (req, res) => {
           console.log('Update Result:', updateResult);
       }
       else if (state === 'offline') {
-          const sessionSeconds = Math.floor(
-              (Date.now() - new Date(last_online_timestamp).getTime()) / 1000
-          );
-          console.log('Last Online:', last_online_timestamp);
-          console.log('Session Duration (seconds):', sessionSeconds);
+          if (last_online_timestamp) {
+              sessionSeconds = Math.floor(
+                  (Date.now() - new Date(last_online_timestamp).getTime()) / 1000
+              );
+              console.log('Last Online:', last_online_timestamp);
+              console.log('Session Duration (seconds):', sessionSeconds);
+          }
 
           // Update online_time and log session
           await pool.query(
@@ -480,7 +484,6 @@ router.put('/updateDriverState', async (req, res) => {
       return res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
-
   
   
 
