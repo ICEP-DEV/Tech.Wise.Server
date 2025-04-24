@@ -132,34 +132,34 @@ router.get('/allTrips', async (req, res) => {
 
 // Endpoint to fetch trips by custoer or driver id and status
 router.get('/tripHistory/:userId', async (req, res) => {
-    const userId = req.params.userId;
-    const status = req.query.status;
-  
-    let query = `
-      SELECT * FROM trips
-      WHERE customerId OR driverId = ?
-    `;
-    const queryParams = [userId];
-  
-    if (status) {
-      query += ` AND statuses = ?`;  // Correct column name
-      queryParams.push(status);
-    }
-  
-    try {
-      const [rows] = await pool.query(query, queryParams);
-  
-      console.log("Fetched Trips for userId:", userId);
-      console.log("Status filter:", status);
-      console.log("Results:", rows);
-  
-      res.json(rows);
-    } catch (error) {
-      console.error('Error fetching trips:', error);
-      res.status(500).send('Error fetching trips');
-    }
-  });
-  
+  const userId = req.params.userId;
+  const status = req.query.status;
+
+  let query = `
+    SELECT * FROM trips
+    WHERE (customerId = ? OR driverId = ?)
+  `;
+  const queryParams = [userId, userId];
+
+  if (status) {
+    query += ` AND statuses = ?`;
+    queryParams.push(status);
+  }
+
+  try {
+    const [rows] = await pool.query(query, queryParams);
+
+    console.log("Fetched Trips for userId:", userId);
+    console.log("Status filter:", status);
+    console.log("Results:", rows);
+
+    res.json(rows);
+  } catch (error) {
+    console.error('Error fetching trips:', error);
+    res.status(500).send('Error fetching trips');
+  }
+});
+
   
 
 // Endpoint to update real-time location in Firestore
