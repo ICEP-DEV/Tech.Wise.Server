@@ -415,67 +415,69 @@ router.put('/updateDriverState', async (req, res) => {
   const { user_id, state } = req.body;
 
   if (!user_id || !state) {
-    return res.status(400).json({ message: 'User ID and state are required' });
+      return res.status(400).json({ message: 'User ID and state are required' });
   }
 
   try {
-    // 1. Get current driver state
-    const [driverRows] = await pool.query(
-      'SELECT state, online_time, last_online_timestamp FROM driver WHERE users_id = ?',
-      [user_id]
-    );
+      // 1. Get current driver state
+      const [driverRows] = await pool.query(
+          'SELECT state, online_time, last_online_timestamp FROM driver WHERE users_id = ?',
+          [user_id]
+      );
    
-    if (driverRows.length === 0) {
-      return res.status(404).json({ message: 'Driver not found' });
-    }
-   
-    const { state: currentState, online_time, last_online_timestamp } = driverRows[0];
-
-    // 2. Prevent redundant state changes
-    if (currentState === state) {
-      return res.status(200).json({ message: 'Already in requested state' });
-    }
-
-    // 3. Handle state transition
-    if (state === 'online') {
-      // Check daily limit (12 hours = 43200 seconds)
-      if (online_time >= 43200) {
-        return res.status(403).json({ message: '12-hour daily limit reached' });
+      if (driverRows.length === 0) {
+          return res.status(404).json({ message: 'Driver not found' });
       }
 
-      // Update only the timestamp
-      await pool.query(
-        'UPDATE driver SET state = ?, last_online_timestamp = NOW() WHERE users_id = ?',
-        [state, user_id]
-      );
-    }
-    else if (state === 'offline') {
-      // Calculate session duration
-      const sessionSeconds = Math.floor(
-        (Date.now() - new Date(last_online_timestamp).getTime()) / 1000
-      );
+      const { state: currentState, online_time, last_online_timestamp } = driverRows[0];
 
-      // Update online_time and log session
-      await pool.query(
-        'UPDATE driver SET state = ?, online_time = online_time + ? WHERE users_id = ?',
-        [state, sessionSeconds, user_id]
-      );
+      // 2. Prevent redundant state changes
+      if (currentState === state) {
+          return res.status(200).json({ message: 'Already in requested state' });
+      }
 
-      await pool.query(
-        'INSERT INTO driver_log (users_id, session_time) VALUES (?, ?)',
-        [user_id, sessionSeconds]
-      );
-    }
+      // 3. Handle state transition
+      if (state === 'online') {
+          if (online_time >= 43200) {
+              return res.status(403).json({ message: '12-hour daily limit reached' });
+          }
 
-    return res.status(200).json({
-      message: 'Status updated',
-      newState: state,
-      online_time: state === 'offline' ? online_time + sessionSeconds : online_time
-    });
+          // Update only the timestamp
+          const [updateResult] = await pool.query(
+              'UPDATE driver SET state = ?, last_online_timestamp = NOW() WHERE users_id = ?',
+              [state, user_id]
+          );
+          console.log('Update Result:', updateResult);
+      }
+      else if (state === 'offline') {
+          const sessionSeconds = Math.floor(
+              (Date.now() - new Date(last_online_timestamp).getTime()) / 1000
+          );
+          console.log('Last Online:', last_online_timestamp);
+          console.log('Session Duration (seconds):', sessionSeconds);
+
+          // Update online_time and log session
+          await pool.query(
+              'UPDATE driver SET state = ?, online_time = online_time + ? WHERE users_id = ?',
+              [state, sessionSeconds, user_id]
+          );
+
+          await pool.query(
+              'INSERT INTO driver_log (users_id, session_time) VALUES (?, ?)',
+              [user_id, sessionSeconds]
+          );
+      }
+
+      return res.status(200).json({
+          message: 'Status updated',
+          newState: state,
+          online_time: state === 'offline' ? online_time + sessionSeconds : online_time
+      });
 
   } catch (error) {
-    console.error('Update error:', error);
-    return res.status(500).json({ message: 'Server error' });
+      console.error('Error details:', error.message);
+      console.error('Error stack trace:', error.stack);
+      return res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
 
