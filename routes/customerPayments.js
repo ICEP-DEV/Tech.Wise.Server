@@ -143,28 +143,30 @@ router.post('/customer-payment', async (req, res) => {
   }
 });
 
-// Endpoint to fetch customer payment details
-router.get('/customer-cards/:user_id', async (req, res) => {
+// Express route handler for fetching customer cards
+router.get('/customer-cards/:user_id', async (req, res, next) => {
   const user_id = req.params.user_id;
 
   const query = `
-    SELECT * FROM user_card_details
+    SELECT id, card_type, last_four_digits, is_selected
+    FROM user_card_details
     WHERE user_id = ?
   `;
 
   try {
     const [rows] = await pool.query(query, [user_id]);
 
-    if (rows.length === 0) {
-      return res.status(404).json({ message: 'No payment details found for this user' });
+    if (!rows || rows.length === 0) {
+      // Return an empty array (not 404) so frontend can handle "no cards" state
+      return res.json([]);
     }
 
-    console.log("Fetched payment details for user_id:", user_id);
-    res.json(rows); // return all payment records for the user
+    // Return all card records for the user
+    res.json(rows);
   } catch (error) {
-    console.error('Error fetching payment data:', error);
-    res.status(500).send('Error fetching payment');
+    console.log("Error fetching customer cards:", error);
   }
 });
+
 
 module.exports = router;
