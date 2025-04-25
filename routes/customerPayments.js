@@ -186,5 +186,22 @@ router.delete('/customer-card/:id', async (req, res) => {
   }
 });
 
+// Endpoint to select a customer's card
+router.put('/customer-card/select', async (req, res) => {
+  const { user_id, selected_card_id } = req.body;
+
+  try {
+    // Set all cards to is_selected = 0
+    await pool.query('UPDATE user_card_details SET is_selected = 0 WHERE user_id = ?', [user_id]);
+
+    // Set selected card to is_selected = 1
+    await pool.query('UPDATE user_card_details SET is_selected = 1 WHERE id = ?', [selected_card_id]);
+
+    res.status(200).json({ message: 'Card selection updated successfully' });
+  } catch (err) {
+    console.error('Error updating card selection:', err);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
 
 module.exports = router;
