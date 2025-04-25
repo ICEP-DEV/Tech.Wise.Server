@@ -95,4 +95,52 @@ router.get('/payment/:tripId', async (req, res) => {
   }
 });
 
+// Create Paystack customer
+router.post('/create-customer', (req, res) => {
+  const { email, first_name, last_name, phone } = req.body;
+
+  const params = JSON.stringify({
+    email,
+    first_name,
+    last_name,
+    phone
+  });
+
+  const options = {
+    hostname: 'api.paystack.co',
+    port: 443,
+    path: '/customer',
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`, // Use dotenv for security
+      'Content-Type': 'application/json',
+    },
+  };
+
+  const paystackReq = https.request(options, paystackRes => {
+    let data = '';
+
+    paystackRes.on('data', chunk => {
+      data += chunk;
+    });
+
+    paystackRes.on('end', () => {
+      const result = JSON.parse(data);
+      if (paystackRes.statusCode === 200 || paystackRes.statusCode === 201) {
+        res.status(200).json(result);
+      } else {
+        res.status(400).json({ error: result });
+      }
+    });
+  });
+
+  paystackReq.on('error', error => {
+    console.error('Paystack Error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  });
+
+  paystackReq.write(params);
+  paystackReq.end();
+});
+
 module.exports = router;
