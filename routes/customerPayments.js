@@ -121,7 +121,7 @@ router.post('/customer-payment', async (req, res) => {
 
   const sql = `
     INSERT INTO user_card_details 
-    (card_number, card_type, bank_code, country_code, user_id, customer_code, is_selected)
+    (last_four_digits, card_type, bank_code, country_code, user_id, customer_code, is_selected)
     VALUES (?, ?, ?, ?, ?, ?, ?)
   `;
 
