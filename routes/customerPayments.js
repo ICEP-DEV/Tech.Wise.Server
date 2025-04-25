@@ -4,40 +4,6 @@ const pool = require('../config/config'); // Use the pool for database connectio
 const https = require('https');
 
 
-// // Endpoint to fetch recipient data
-// router.get('/recipient', async (req, res) => {
-//   const { user_id } = req.query;
-
-//   console.log('Fetching recipient for user_id:', user_id);
-
-//   if (!user_id) {
-//     return res.status(400).json({ message: 'User ID is required' });
-//   }
-
-//   const sql = `
-//       SELECT 
-//           id, paystack_recipient_id, bank_code, country_code, user_id, 
-//           created_at, last_four_digits, is_selected 
-//       FROM recipients 
-//       WHERE user_id = ?
-//   `;
-
-//   try {
-//     const startTime = Date.now();
-//     const [rows] = await pool.query(sql, [user_id]);
-//     console.log(`Query executed in ${Date.now() - startTime} ms`);
-
-//     if (rows.length > 0) {
-//       res.json({ recipients: rows });
-//     } else {
-//       res.status(404).json({ message: 'No recipient found. Please add your card details first.' });
-//     }
-//   } catch (error) {
-//     console.error('Error executing query:', error);
-//     res.status(500).json({ message: 'Internal server error' });
-//   }
-// });
-
 // POST endpoint to insert payment data
 router.post('/payment', async (req, res) => {
   const { tripId, paymentType, amount, paymentDate } = req.body;
@@ -143,5 +109,39 @@ router.post('/create-customer', (req, res) => {
   paystackReq.write(params);
   paystackReq.end();
 });
+// Endpoint to save customer data
+router.post('/customer-payment', async (req, res) => {
+  const { card_number, card_type, bank_code, country_code, user_id, customer_code, is_selected } = req.body;
+
+  console.log('Incoming card data:', req.body);
+
+  if (!card_number || !card_type || !bank_code || !country_code || !user_id || !customer_code) {
+    return res.status(400).json({ message: 'Required fields are missing' });
+  }
+
+  const sql = `
+    INSERT INTO user_card_details 
+    (card_number, card_type, bank_code, country_code, user_id, customer_code, is_selected)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `;
+
+  try {
+    const [result] = await pool.query(sql, [
+      card_number,
+      card_type,
+      bank_code,
+      country_code,
+      user_id,
+      customer_code,
+      is_selected,
+    ]);
+
+    res.status(200).json({ message: 'Card details saved successfully', insertId: result.insertId });
+  } catch (error) {
+    console.error('Error saving card details:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
 
 module.exports = router;
