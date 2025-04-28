@@ -109,6 +109,40 @@ router.post('/create-customer', (req, res) => {
   paystackReq.write(params);
   paystackReq.end();
 });
+
+// Endpoint to Insert or Update Customer Code
+router.put('/update-customer-code', async (req, res) => {
+  const { customer_code, user_id } = req.body;
+
+  // Validate that the required fields are provided
+  if (!customer_code || !user_id) {
+    return res.status(400).json({ error: 'Missing required fields: customer_code or user_id' });
+  }
+
+  try {
+    // Check if a record exists for the provided customer_code and user_id
+    const checkQuery = `SELECT id FROM users WHERE customer_code = ? AND id = ?`;
+    const [existingCustomer] = await db.query(checkQuery, [customer_code, user_id]);
+
+    if (existingCustomer.length > 0) {
+      // Customer exists, so update the record
+      const updateQuery = `UPDATE users SET customer_code = ? WHERE id = ?`;
+      await db.query(updateQuery, [customer_code, user_id]);
+      res.status(200).json({ message: "Customer code updated successfully" });
+    } else {
+      // Customer does not exist, so insert a new record (if needed)
+      const insertQuery = `UPDATE users SET customer_code = ? WHERE id = ?`;
+      await db.query(insertQuery, [customer_code, user_id]);
+      res.status(201).json({ message: "Customer code inserted successfully" });
+    }
+  } catch (error) {
+    console.error("Failed to insert/update customer code", error);
+    res.status(500).json({ error: "Failed to insert/update customer code" });
+  }
+});
+
+
+
 // Endpoint to save customer data
 router.post('/customer-payment', async (req, res) => {
   const { card_number, card_type, bank_code, country_code, user_id, customer_code, is_selected } = req.body;
