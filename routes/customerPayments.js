@@ -110,7 +110,7 @@ router.post('/create-customer', (req, res) => {
   paystackReq.end();
 });
 
-// Endpoint to Insert or Update Customer Code
+// Endpoint to Insert or Update Customer Code in user_card_details table
 router.put('/update-customer-code', async (req, res) => {
   const { customer_code, user_id } = req.body;
 
@@ -121,17 +121,17 @@ router.put('/update-customer-code', async (req, res) => {
 
   try {
     // Check if a record exists for the provided customer_code and user_id
-    const checkQuery = `SELECT id FROM users WHERE customer_code = ? AND id = ?`;
+    const checkQuery = `SELECT id FROM user_card_details WHERE customer_code = ? AND id = ?`;
     const [existingCustomer] = await db.query(checkQuery, [customer_code, user_id]);
 
     if (existingCustomer.length > 0) {
       // Customer exists, so update the record
-      const updateQuery = `UPDATE users SET customer_code = ? WHERE id = ?`;
+      const updateQuery = `UPDATE user_card_details SET customer_code = ? WHERE id = ?`;
       await db.query(updateQuery, [customer_code, user_id]);
       res.status(200).json({ message: "Customer code updated successfully" });
     } else {
       // Customer does not exist, so insert a new record (if needed)
-      const insertQuery = `UPDATE users SET customer_code = ? WHERE id = ?`;
+      const insertQuery = `UPDATE user_card_details SET customer_code = ? WHERE id = ?`;
       await db.query(insertQuery, [customer_code, user_id]);
       res.status(201).json({ message: "Customer code inserted successfully" });
     }
