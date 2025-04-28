@@ -110,6 +110,7 @@ router.post('/create-customer', (req, res) => {
   paystackReq.end();
 });
 
+
 // Endpoint to Insert or Update Customer Code in user_card_details table
 router.put('/update-customer-code', async (req, res) => {
   const { customer_code, user_id } = req.body;
