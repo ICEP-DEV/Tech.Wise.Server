@@ -123,7 +123,7 @@ router.put('/update-customer-code', async (req, res) => {
   try {
     // Check if a record exists for the provided customer_code and user_id
     const checkQuery = `SELECT id FROM user_card_details WHERE customer_code = ? AND user_id = ?`;
-    const [existingCustomer] = await db.query(checkQuery, [customer_code, user_id]);
+    const [existingCustomer] = await pool.query(checkQuery, [customer_code, user_id]);
 
     if (existingCustomer.length > 0) {
       // Customer exists, so update the record
