@@ -128,12 +128,12 @@ router.put('/update-customer-code', async (req, res) => {
     if (existingCustomer.length > 0) {
       // Customer exists, so update the record
       const updateQuery = `UPDATE user_card_details SET customer_code = ? WHERE user_id = ?`;
-      await db.query(updateQuery, [customer_code, user_id]);
+      await pool.query(updateQuery, [customer_code, user_id]);
       res.status(200).json({ message: "Customer code updated successfully" });
     } else {
       // Customer does not exist, so insert a new record
       const insertQuery = `INSERT INTO user_card_details (customer_code, user_id) VALUES (?, ?)`;
-      await db.query(insertQuery, [customer_code, user_id]);
+      await pool.query(insertQuery, [customer_code, user_id]);
       res.status(201).json({ message: "Customer code inserted successfully" });
     }
   } catch (error) {
