@@ -142,6 +142,32 @@ router.put('/update-customer-code', async (req, res) => {
   }
 });
 
+// Endpoint to Fetch Customer Code for a specific user
+router.get('/user/:user_id/customer-code', async (req, res) => {
+  const { user_id } = req.params;
+
+  // Validate that the user_id is provided
+  if (!user_id) {
+    return res.status(400).json({ error: 'Missing required field: user_id' });
+  }
+
+  try {
+    // Query to get the customer code for the provided user_id
+    const query = `SELECT customer_code FROM user_card_details WHERE user_id = ?`;
+    const [customer] = await pool.query(query, [user_id]);
+
+    if (customer.length > 0) {
+      // If the customer code is found, return it
+      res.status(200).json({ customer_code: customer[0].customer_code });
+    } else {
+      // If no customer code is found for the user_id
+      res.status(404).json({ error: 'Customer code not found, please complete your profile' });
+    }
+  } catch (error) {
+    console.error("Failed to fetch customer code", error);
+    res.status(500).json({ error: "Failed to fetch customer code" });
+  }
+});
 
 
 
