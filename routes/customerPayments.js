@@ -83,7 +83,7 @@ router.post('/create-customer', (req, res) => {
       'Content-Type': 'application/json',
     },
   };
-
+ 
   const paystackReq = https.request(options, paystackRes => {
     let data = '';
 
