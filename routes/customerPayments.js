@@ -122,17 +122,17 @@ router.put('/update-customer-code', async (req, res) => {
 
   try {
     // Check if a record exists for the provided customer_code and user_id
-    const checkQuery = `SELECT id FROM user_card_details WHERE customer_code = ? AND id = ?`;
+    const checkQuery = `SELECT id FROM user_card_details WHERE customer_code = ? AND user_id = ?`;
     const [existingCustomer] = await db.query(checkQuery, [customer_code, user_id]);
 
     if (existingCustomer.length > 0) {
       // Customer exists, so update the record
-      const updateQuery = `UPDATE user_card_details SET customer_code = ? WHERE id = ?`;
+      const updateQuery = `UPDATE user_card_details SET customer_code = ? WHERE user_id = ?`;
       await db.query(updateQuery, [customer_code, user_id]);
       res.status(200).json({ message: "Customer code updated successfully" });
     } else {
-      // Customer does not exist, so insert a new record (if needed)
-      const insertQuery = `UPDATE user_card_details SET customer_code = ? WHERE id = ?`;
+      // Customer does not exist, so insert a new record
+      const insertQuery = `INSERT INTO user_card_details (customer_code, user_id) VALUES (?, ?)`;
       await db.query(insertQuery, [customer_code, user_id]);
       res.status(201).json({ message: "Customer code inserted successfully" });
     }
@@ -141,6 +141,7 @@ router.put('/update-customer-code', async (req, res) => {
     res.status(500).json({ error: "Failed to insert/update customer code" });
   }
 });
+
 
 
 
