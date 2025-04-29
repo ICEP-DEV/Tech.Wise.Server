@@ -3,6 +3,8 @@ const router = express.Router();
 const pool = require('../config/config'); // Use the pool for database connection
 const https = require('https');
 const { default: axios } = require('axios');
+require("dotenv").config(); // Load environment variables from .env file
+const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY;
 
 
 // POST endpoint to insert payment data
