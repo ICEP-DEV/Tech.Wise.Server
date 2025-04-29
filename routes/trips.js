@@ -7,13 +7,6 @@ const firestoreDb = require('../config/FirebaseConfig').db;
 router.post('/trips', async (req, res) => {
     console.log('Request Body:', req.body);
 
-    // Extract tripData from the request body
-    const { tripData } = req.body;
-    
-    if (!tripData) {
-        return res.status(400).json({ error: "Trip data is missing" });
-    }
-
     const {
         customerId,
         driverId,
@@ -34,22 +27,40 @@ router.post('/trips', async (req, res) => {
         pickUpCoordinates,
         dropOffCoordinates,
         payment_status
-    } = tripData;
+    } = req.body.tripData;
+
+    console.log('Extracted Data:', {
+        customerId,
+        driverId,
+        requestDate,
+        currentDate,
+        pickUpLocation,
+        dropOffLocation,
+        statuses,
+        customer_rating,
+        customer_feedback,
+        duration_minutes,
+        vehicle_type,
+        distance_traveled,
+        cancellation_reason,
+        cancel_by,
+        pickupTime,
+        dropOffTime,
+        pickUpCoordinates,
+        dropOffCoordinates,
+        payment_status
+    });
 
     // Ensure required fields are present
-    if (!customerId || !driverId) {
-        return res.status(400).json({ error: "Customer ID or Driver ID is missing" });
-    }
-
-    if (!pickUpCoordinates || !dropOffCoordinates) {
-        return res.status(400).json({ error: "Pickup or drop-off coordinates are missing" });
+    if (!customerId || !driverId || !pickUpCoordinates || !dropOffCoordinates) {
+        return res.status(400).json({ error: "Required fields are missing" });
     }
 
     const { latitude: pickUpLatitude, longitude: pickUpLongitude } = pickUpCoordinates || {};
     const { latitude: dropOffLatitude, longitude: dropOffLongitude } = dropOffCoordinates || {};
 
     if (!pickUpLatitude || !pickUpLongitude || !dropOffLatitude || !dropOffLongitude) {
-        return res.status(400).json({ error: "Pickup or drop-off coordinates are incomplete" });
+        return res.status(400).json({ error: "Pickup or drop-off coordinates are missing" });
     }
 
     // SQL query for inserting trip data with payment_status = 'pending'
@@ -73,7 +84,7 @@ router.post('/trips', async (req, res) => {
             cancellation_reason, cancel_by, pickupTime, dropOffTime,
             pickUpLatitude, pickUpLongitude, // Insert latitudes and longitudes as DOUBLE values
             dropOffLatitude, dropOffLongitude,
-            payment_status || 'pending'
+            payment_status
         ]);
 
         connection.release(); // Release the connection back to the pool
