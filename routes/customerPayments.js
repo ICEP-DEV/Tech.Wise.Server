@@ -280,7 +280,7 @@ router.post('/initialize-payment', async (req, res) => {
       {
         email,
         amount, // Must be in kobo for NGN (e.g. 1000 NGN = 100000)
-        callback_url: 'http://localhost:8081/payment-success'
+        callback_url: 'http://localhost:8081/PaymentSuccess' // Replace with your actual callback URL
       },
       {
         headers: {
