@@ -83,7 +83,7 @@ router.post('/create-customer', (req, res) => {
       'Content-Type': 'application/json',
     },
   };
- 
+
   const paystackReq = https.request(options, paystackRes => {
     let data = '';
 
@@ -263,6 +263,59 @@ router.put('/customer-card/select', async (req, res) => {
   } catch (err) {
     console.error('Error updating card selection:', err);
     res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+//endpoint to innitialize payment with paystack
+// POST /initialize-payment
+router.post('/initialize-payment', async (req, res) => {
+  const { email, amount } = req.body;
+
+  try {
+    const response = await axios.post(
+      'https://api.paystack.co/transaction/initialize',
+      {
+        email,
+        amount, // Must be in kobo for NGN (e.g. 1000 NGN = 100000)
+        callback_url: 'http://localhost:8081/payment-success'
+
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${PAYSTACK_SECRET_KEY}`,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+
+    console.log('Payment initialized:', response.data);
+    res.json(response.data);
+  } catch (error) {
+    console.error('Error initializing payment:', error.response?.data || error.message);
+    res.status(500).json({ error: 'Payment initialization failed' });
+  }
+});
+// Endpoint to handle Paystack payment verification
+router.get('/verify-payment/:reference', async (req, res) => {
+  const { reference } = req.params;
+
+  try {
+    const response = await axios.get(`https://api.paystack.co/transaction/verify/${reference}`, {
+      headers: {
+        Authorization: `Bearer ${PAYSTACK_SECRET_KEY}`,
+      },
+    });
+
+    const data = response.data.data;
+    if (data.status === 'success') {
+      // You can update your database here as well
+      res.json({ status: 'success', data });
+    } else {
+      res.json({ status: 'failed', data });
+    }
+  } catch (error) {
+    console.error('Verification failed:', error.response?.data || error.message);
+    res.status(500).json({ error: 'Verification error' });
   }
 });
 
