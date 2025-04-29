@@ -300,25 +300,45 @@ router.post('/initialize-payment', async (req, res) => {
 // Endpoint to handle Paystack payment verification
 router.get('/verify-payment/:reference', async (req, res) => {
   const { reference } = req.params;
+  const { tripId } = req.query; // tripId must be passed as a query param from client
+
+  if (!tripId) {
+    return res.status(400).json({ error: 'Missing tripId' });
+  }
 
   try {
     const response = await axios.get(`https://api.paystack.co/transaction/verify/${reference}`, {
       headers: {
-        Authorization: `Bearer ${PAYSTACK_SECRET_KEY}`,
+        Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
       },
     });
 
     const data = response.data.data;
+
     if (data.status === 'success') {
-      // You can update your database here as well
-      res.json({ status: 'success', data });
+      const paymentType = 'card';
+      const amount = data.amount / 100; // Paystack returns amount in kobo
+      const paymentDate = new Date(data.paid_at);
+      const payment_reference = data.reference;
+      const card_id = data.authorization?.last4 || null;
+      const payment_status = data.status;
+      const currency = data.currency;
+
+      // Insert into database
+      await db.query(
+        `INSERT INTO payment 
+          (tripId, paymentType, amount, paymentDate, payment_reference, card_id, payment_status, currency)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [tripId, paymentType, amount, paymentDate, payment_reference, card_id, payment_status, currency]
+      );
+
+      return res.json({ status: 'success', data });
     } else {
-      res.json({ status: 'failed', data });
+      return res.json({ status: 'failed', data });
     }
   } catch (error) {
-    console.error('Verification failed:', error.response?.data || error.message);
-    res.status(500).json({ error: 'Verification error' });
+    console.error('Payment verification failed:', error.response?.data || error.message);
+    return res.status(500).json({ error: 'Payment verification error' });
   }
 });
-
 module.exports = router;
