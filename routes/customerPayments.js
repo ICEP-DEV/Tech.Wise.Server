@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../config/config'); // Use the pool for database connection
 const https = require('https');
+const { default: axios } = require('axios');
 
 
 // POST endpoint to insert payment data
@@ -278,7 +279,6 @@ router.post('/initialize-payment', async (req, res) => {
         email,
         amount, // Must be in kobo for NGN (e.g. 1000 NGN = 100000)
         callback_url: 'http://localhost:8081/payment-success'
-
       },
       {
         headers: {
