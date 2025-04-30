@@ -381,6 +381,7 @@ router.post('/customer-payment', async (req, res) => {
     authorization_code
   } = req.body;
 
+  // Check for missing required fields
   if (
     !card_number || !card_type || !bank_code || !country_code || !user_id ||
     !customer_code || typeof is_selected === 'undefined' || typeof is_default === 'undefined' ||
@@ -411,13 +412,13 @@ router.post('/customer-payment', async (req, res) => {
       return res.status(200).json({ message: 'Card already saved', cardId: existing[0].id });
     }
 
-    // Set all other cards for this user to is_selected = false
+    // Step 1: Set all previous cards for user to is_selected = false
     await pool.query(
       `UPDATE user_card_details SET is_selected = false WHERE user_id = ?`,
       [user_id]
     );
 
-    // Insert the new card
+    // Step 2: Insert new card with is_selected = true
     const insertSQL = `
       INSERT INTO user_card_details 
       (last_four_digits, card_type, bank_code, country_code, user_id, customer_code, is_selected, is_default, payment_id, created_at, authorization_code)
@@ -431,11 +432,11 @@ router.post('/customer-payment', async (req, res) => {
       country_code,
       user_id,
       customer_code,
-      true,
+      true,  // Always set new card as selected
       is_default,
       payment_id,
       created_at,
-      authorization_code
+      authorization_code // Ensure this is passed correctly here
     ]);
 
     res.status(200).json({ message: 'Card saved & set as default', insertId: insertResult.insertId });
@@ -444,6 +445,7 @@ router.post('/customer-payment', async (req, res) => {
     res.status(500).json({ message: 'Internal server error' });
   }
 });
+
 
 
 module.exports = router;
