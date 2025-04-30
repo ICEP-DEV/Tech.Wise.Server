@@ -329,21 +329,20 @@ router.post('/save-payment', async (req, res) => {
     amount,
     paymentDate,
     payment_reference,
-    card_id,
     payment_status,
     currency
   } = req.body;
 
   console.log('Incoming payment data:', req.body);
 
-  if (!tripId || !paymentType || !amount || !paymentDate || !payment_reference || !card_id || !payment_status || !currency) {
+  if (!tripId || !paymentType || !amount || !paymentDate || !payment_reference  || !payment_status || !currency) {
     return res.status(400).json({ message: 'Missing required payment fields' });
   }
 
   const sql = `
     INSERT INTO payment 
-    (tripId, paymentType, amount, paymentDate, payment_reference, card_id, payment_status, currency)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    (tripId, paymentType, amount, paymentDate, payment_reference, payment_status, currency)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
   `;
 
   try {
@@ -353,7 +352,6 @@ router.post('/save-payment', async (req, res) => {
       amount,
       paymentDate,
       payment_reference,
-      card_id,
       payment_status,
       currency
     ]);
