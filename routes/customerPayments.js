@@ -321,4 +321,119 @@ router.get('/verify-payment/:reference', async (req, res) => {
   }
 });
 
+// Endpoint to save payment details
+router.post('/save-payment', async (req, res) => {
+  const {
+    tripId,
+    paymentType,
+    amount,
+    paymentDate,
+    payment_reference,
+    card_id,
+    payment_status,
+    currency
+  } = req.body;
+
+  console.log('Incoming payment data:', req.body);
+
+  if (!tripId || !paymentType || !amount || !paymentDate || !payment_reference || !card_id || !payment_status || !currency) {
+    return res.status(400).json({ message: 'Missing required payment fields' });
+  }
+
+  const sql = `
+    INSERT INTO payment 
+    (tripId, paymentType, amount, paymentDate, payment_reference, card_id, payment_status, currency)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `;
+
+  try {
+    const [result] = await pool.query(sql, [
+      tripId,
+      paymentType,
+      amount,
+      paymentDate,
+      payment_reference,
+      card_id,
+      payment_status,
+      currency
+    ]);
+
+    res.status(200).json({ message: 'Payment saved successfully', insertId: result.insertId });
+  } catch (error) {
+    console.error('Error saving payment:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+
+// Endpoint to save customer payment details
+router.post('/customer-payment', async (req, res) => {
+  const {
+    card_number,
+    card_type,
+    bank_code,
+    country_code,
+    user_id,
+    customer_code,
+    is_selected,
+    is_default,
+    payment_id,
+    created_at,
+    authorization_code,
+  } = req.body;
+
+  if (
+    !card_number || !card_type || !bank_code || !country_code || !user_id ||
+    !customer_code || typeof is_selected === 'undefined' || typeof is_default === 'undefined' ||
+    !payment_id || !created_at || !authorization_code
+  ) {
+    return res.status(400).json({ message: 'Required fields are missing' });
+  }
+
+  try {
+    // Check if card already exists
+    const [existing] = await pool.query(
+      `SELECT * FROM user_card_details 
+       WHERE user_id = ? AND card_type = ? AND last_four_digits = ? AND customer_code = ?`,
+      [user_id, card_type, card_number, customer_code]
+    );
+
+    if (existing.length > 0) {
+      return res.status(200).json({ message: 'Card already saved', cardId: existing[0].id });
+    }
+
+    // Step 1: Set all previous cards for user to is_selected = false
+    await pool.query(
+      `UPDATE user_card_details SET is_selected = false WHERE user_id = ?`,
+      [user_id]
+    );
+
+    // Step 2: Insert new card with is_selected = true
+    const sql = `
+      INSERT INTO user_card_details 
+      (last_four_digits, card_type, bank_code, country_code, user_id, customer_code, is_selected, is_default, payment_id, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `;
+
+    const [result] = await pool.query(sql, [
+      card_number,
+      card_type.trim(),
+      bank_code,
+      country_code,
+      user_id,
+      customer_code,
+      true,         // Always set new card as selected
+      is_default,
+      payment_id,
+      created_at
+    ]);
+
+    res.status(200).json({ message: 'Card saved & set as default', insertId: result.insertId });
+  } catch (error) {
+    console.error('Error saving card details:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+
 module.exports = router;
