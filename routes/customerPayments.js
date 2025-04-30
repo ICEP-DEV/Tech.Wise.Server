@@ -174,39 +174,39 @@ router.get('/user/:user_id/customer-code', async (req, res) => {
 
 
 
-// Endpoint to save customer data
-router.post('/customer-payment', async (req, res) => {
-  const { card_number, card_type, bank_code, country_code, user_id, customer_code, is_selected } = req.body;
+// // Endpoint to save customer data
+// router.post('/customer-payment', async (req, res) => {
+//   const { card_number, card_type, bank_code, country_code, user_id, customer_code, is_selected } = req.body;
 
-  console.log('Incoming card data:', req.body);
+//   console.log('Incoming card data:', req.body);
 
-  if (!card_number || !card_type || !bank_code || !country_code || !user_id || !customer_code) {
-    return res.status(400).json({ message: 'Required fields are missing' });
-  }
+//   if (!card_number || !card_type || !bank_code || !country_code || !user_id || !customer_code) {
+//     return res.status(400).json({ message: 'Required fields are missing' });
+//   }
 
-  const sql = `
-    INSERT INTO user_card_details 
-    (last_four_digits, card_type, bank_code, country_code, user_id, customer_code, is_selected)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-  `;
+//   const sql = `
+//     INSERT INTO user_card_details 
+//     (last_four_digits, card_type, bank_code, country_code, user_id, customer_code, is_selected)
+//     VALUES (?, ?, ?, ?, ?, ?, ?)
+//   `;
 
-  try {
-    const [result] = await pool.query(sql, [
-      card_number,
-      card_type,
-      bank_code,
-      country_code,
-      user_id,
-      customer_code,
-      is_selected,
-    ]);
+//   try {
+//     const [result] = await pool.query(sql, [
+//       card_number,
+//       card_type,
+//       bank_code,
+//       country_code,
+//       user_id,
+//       customer_code,
+//       is_selected,
+//     ]);
 
-    res.status(200).json({ message: 'Card details saved successfully', insertId: result.insertId });
-  } catch (error) {
-    console.error('Error saving card details:', error);
-    res.status(500).json({ message: 'Internal server error' });
-  }
-});
+//     res.status(200).json({ message: 'Card details saved successfully', insertId: result.insertId });
+//   } catch (error) {
+//     console.error('Error saving card details:', error);
+//     res.status(500).json({ message: 'Internal server error' });
+//   }
+// });
 
 // Express route handler for fetching customer cards
 router.get('/customer-cards/:user_id', async (req, res, next) => {
