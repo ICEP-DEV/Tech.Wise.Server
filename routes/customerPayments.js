@@ -378,7 +378,7 @@ router.post('/customer-payment', async (req, res) => {
     is_default,
     payment_id,
     created_at,
-    authorization_code,
+    authorization_code
   } = req.body;
 
   if (
@@ -390,6 +390,16 @@ router.post('/customer-payment', async (req, res) => {
   }
 
   try {
+    // Check if the payment_id exists (FK check)
+    const [paymentExists] = await pool.query(
+      `SELECT id FROM payment WHERE id = ?`,
+      [payment_id]
+    );
+
+    if (paymentExists.length === 0) {
+      return res.status(400).json({ message: 'Invalid payment ID (FK constraint)' });
+    }
+
     // Check if card already exists
     const [existing] = await pool.query(
       `SELECT * FROM user_card_details 
@@ -401,33 +411,34 @@ router.post('/customer-payment', async (req, res) => {
       return res.status(200).json({ message: 'Card already saved', cardId: existing[0].id });
     }
 
-    // Step 1: Set all previous cards for user to is_selected = false
+    // Set all other cards for this user to is_selected = false
     await pool.query(
       `UPDATE user_card_details SET is_selected = false WHERE user_id = ?`,
       [user_id]
     );
 
-    // Step 2: Insert new card with is_selected = true
-    const sql = `
+    // Insert the new card
+    const insertSQL = `
       INSERT INTO user_card_details 
-      (last_four_digits, card_type, bank_code, country_code, user_id, customer_code, is_selected, is_default, payment_id, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      (last_four_digits, card_type, bank_code, country_code, user_id, customer_code, is_selected, is_default, payment_id, created_at, authorization_code)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
-    const [result] = await pool.query(sql, [
+    const [insertResult] = await pool.query(insertSQL, [
       card_number,
       card_type.trim(),
       bank_code,
       country_code,
       user_id,
       customer_code,
-      true,         // Always set new card as selected
+      true,
       is_default,
       payment_id,
-      created_at
+      created_at,
+      authorization_code
     ]);
 
-    res.status(200).json({ message: 'Card saved & set as default', insertId: result.insertId });
+    res.status(200).json({ message: 'Card saved & set as default', insertId: insertResult.insertId });
   } catch (error) {
     console.error('Error saving card details:', error);
     res.status(500).json({ message: 'Internal server error' });
