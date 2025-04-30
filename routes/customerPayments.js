@@ -356,7 +356,8 @@ router.post('/save-payment', async (req, res) => {
       currency
     ]);
 
-    res.status(200).json({ message: 'Payment saved successfully', insertId: result.insertId });
+       // ✅ Return the insertId to frontend
+       res.status(200).json({ message: 'Payment saved successfully', payment_id: result.insertId });
   } catch (error) {
     console.error('Error saving payment:', error);
     res.status(500).json({ message: 'Internal server error' });
