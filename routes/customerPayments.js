@@ -330,39 +330,55 @@ router.post('/save-payment', async (req, res) => {
     paymentDate,
     payment_reference,
     payment_status,
-    currency
+    currency,
+    paymentId, // May be provided for update
   } = req.body;
 
   console.log('Incoming payment data:', req.body);
 
-  if (!tripId || !paymentType || !amount || !paymentDate || !payment_reference  || !payment_status || !currency) {
+  // Validate base required fields
+  if (!tripId || !paymentType || !amount || !paymentDate || !payment_reference || !payment_status || !currency) {
     return res.status(400).json({ message: 'Missing required payment fields' });
   }
 
-  const sql = `
-    INSERT INTO payment 
-    (tripId, paymentType, amount, paymentDate, payment_reference, payment_status, currency)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-  `;
-
   try {
-    const [result] = await pool.query(sql, [
-      tripId,
-      paymentType,
-      amount,
-      paymentDate,
-      payment_reference,
-      payment_status,
-      currency
-    ]);
+    if (paymentId) {
+      // ✅ Perform UPDATE if paymentId exists
+      const updateSql = `
+        UPDATE payment
+        SET payment_status = ?, currency = ?
+        WHERE id = ?
+      `;
 
-       // ✅ Return the insertId to frontend
-       res.status(200).json({ message: 'Payment saved successfully', payment_id: result.insertId });
+      await pool.query(updateSql, [payment_status, currency, paymentId]);
+
+      return res.status(200).json({ message: 'Payment updated successfully', updated: true, payment_id: paymentId });
+    } else {
+      // ✅ Perform INSERT if no paymentId
+      const insertSql = `
+        INSERT INTO payment 
+        (tripId, paymentType, amount, paymentDate, payment_reference, payment_status, currency)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `;
+
+      const [result] = await pool.query(insertSql, [
+        tripId,
+        paymentType,
+        amount,
+        paymentDate,
+        payment_reference,
+        payment_status,
+        currency
+      ]);
+
+      return res.status(200).json({ message: 'Payment saved successfully', payment_id: result.insertId });
+    }
   } catch (error) {
-    console.error('Error saving payment:', error);
+    console.error('Error saving or updating payment:', error);
     res.status(500).json({ message: 'Internal server error' });
   }
 });
+
 
 
 // Endpoint to save customer payment details
