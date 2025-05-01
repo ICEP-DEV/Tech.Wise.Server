@@ -8,29 +8,30 @@ const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY;
 
 
 // POST endpoint to insert payment data
+
 router.post('/payment', async (req, res) => {
-  const { tripId, paymentType, amount, paymentDate } = req.body;
+  const { tripId, user_id, paymentType, amount, paymentDate } = req.body;
 
-  console.log('Request to process payment data:', req.body); // Log incoming request data
+  console.log('Request to process payment data:', req.body);
 
-  // Validate the required fields
-  if (!tripId || !paymentType || !amount || !paymentDate) {
+  // Validate required fields
+  if (!tripId || !user_id || !paymentType || !amount || !paymentDate) {
     return res.status(400).json({ message: 'Required fields are missing' });
   }
 
-  // SQL query to insert payment data with currency = 'ZAR'
+  // SQL query to insert payment data with user_id and currency = 'ZAR'
   const sql = `
-    INSERT INTO payment (tripId, paymentType, amount, paymentDate, currency)
-    VALUES (?, ?, ?, ?, 'ZAR')
+    INSERT INTO payment (tripId, user_id, paymentType, amount, paymentDate, currency)
+    VALUES (?, ?, ?, ?, ?, 'ZAR')
   `;
 
   try {
-    const startTime = Date.now(); // Log start time
+    const startTime = Date.now();
 
-    // Execute the query using the pool.query method
-    const [result] = await pool.query(sql, [tripId, paymentType, amount, paymentDate]);
+    // Execute the query
+    const [result] = await pool.query(sql, [tripId, user_id, paymentType, amount, paymentDate]);
 
-    const queryDuration = Date.now() - startTime; // Log query duration
+    const queryDuration = Date.now() - startTime;
     console.log('Query executed in:', queryDuration, 'ms');
 
     console.log('Payment data inserted successfully');
@@ -40,6 +41,7 @@ router.post('/payment', async (req, res) => {
     return res.status(500).json({ message: 'Internal server error' });
   }
 });
+
 
 // Endpoint to fetch payment details for a specific trip
 router.get('/payment/:tripId', async (req, res) => {
@@ -398,9 +400,6 @@ router.post('/save-payment', async (req, res) => {
   }
 });
 
-
-
-
 // Endpoint to save customer payment details
 router.post('/customer-payment', async (req, res) => {
   const {
@@ -482,6 +481,33 @@ router.post('/customer-payment', async (req, res) => {
   }
 });
 
+// PUT /payments/user/:user_id/status
+router.put('/payments/user/:user_id/status', async (req, res) => {
+  const { user_id } = req.params;
+
+  if (!user_id) {
+    return res.status(400).json({ message: "User ID is required" });
+  }
+
+  const sql = `
+    UPDATE payment
+    SET payment_status = 'success'
+    WHERE user_id = ?
+  `;
+
+  try {
+    const [result] = await pool.query(sql, [user_id]);
+
+    if (result.affectedRows > 0) {
+      res.json({ message: "Payment status updated to success" });
+    } else {
+      res.status(404).json({ message: "No payment record found for user" });
+    }
+  } catch (error) {
+    console.error("Error updating payment status:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
 
 
 module.exports = router;
