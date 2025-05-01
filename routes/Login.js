@@ -13,7 +13,7 @@ router.post('/login', async (req, res) => {
     }
     
 
-    const sql = "SELECT id, role, name, email FROM users WHERE email = ? AND password = ?";
+    const sql = "SELECT id, role, name, email, customer_code FROM users WHERE email = ? AND password = ?";
 
     try {
         const connection = await pool.getConnection();
