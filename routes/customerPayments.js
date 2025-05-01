@@ -156,7 +156,7 @@ router.get('/user/:user_id/customer-code', async (req, res) => {
 
   try {
     // Query to get the customer code for the provided user_id
-    const query = `SELECT customer_code FROM user_card_details WHERE user_id = ?`;
+    const query = `SELECT customer_code FROM users WHERE user_id = ?`;
     const [customer] = await pool.query(query, [user_id]);
 
     if (customer.length > 0) {
