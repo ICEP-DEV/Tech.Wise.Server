@@ -333,6 +333,7 @@ router.get('/verify-payment/:reference', async (req, res) => {
 });
 
 // Endpoint to save payment details
+// Endpoint to save payment details
 router.post('/save-payment', async (req, res) => {
   const {
     tripId,
@@ -342,7 +343,7 @@ router.post('/save-payment', async (req, res) => {
     payment_reference,
     payment_status,
     currency,
-    paymentId, // This may or may not be present
+    paymentId, // optional
   } = req.body;
 
   console.log('Incoming payment data:', req.body);
@@ -355,17 +356,31 @@ router.post('/save-payment', async (req, res) => {
   }
 
   try {
+    // ✅ Fetch user_id (customerId) from trips table
+    const [tripRows] = await pool.query(
+      `SELECT customerId FROM trips WHERE id = ?`,
+      [tripId]
+    );
+
+    if (tripRows.length === 0) {
+      return res.status(404).json({ message: 'Trip not found' });
+    }
+
+    const user_id = tripRows[0].customerId; // ✅ got user_id
+
     if (paymentId) {
-      // ✅ Update existing payment record
+      // ✅ UPDATE existing payment (also update user_id just in case)
       const updateSql = `
         UPDATE payment
         SET
+          user_id = ?,
           payment_reference = ?,
           payment_status = ?,
           currency = ?
         WHERE id = ?
       `;
       const [updateResult] = await pool.query(updateSql, [
+        user_id,
         payment_reference,
         payment_status,
         currency,
@@ -375,14 +390,16 @@ router.post('/save-payment', async (req, res) => {
       console.log('Payment updated successfully');
       return res.status(200).json({ message: 'Payment updated successfully', payment_id: paymentId });
     } else {
-      // ✅ Insert new payment record
+      // ✅ INSERT new payment
       const insertSql = `
         INSERT INTO payment 
-        (tripId, paymentType, amount, paymentDate, payment_reference, payment_status, currency)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        (tripId, user_id, paymentType, amount, paymentDate, payment_reference, payment_status, currency)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       `;
+
       const [insertResult] = await pool.query(insertSql, [
         tripId,
+        user_id,
         paymentType,
         amount,
         paymentDate,
@@ -399,6 +416,7 @@ router.post('/save-payment', async (req, res) => {
     return res.status(500).json({ message: 'Internal server error' });
   }
 });
+
 
 // Endpoint to save customer payment details
 router.post('/customer-payment', async (req, res) => {
