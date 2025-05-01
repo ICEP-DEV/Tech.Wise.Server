@@ -18,10 +18,10 @@ router.post('/payment', async (req, res) => {
     return res.status(400).json({ message: 'Required fields are missing' });
   }
 
-  // SQL query to insert payment data into the database
+  // SQL query to insert payment data with currency = 'ZAR'
   const sql = `
-    INSERT INTO payment (tripId, paymentType, amount, paymentDate)
-    VALUES (?, ?, ?, ?)
+    INSERT INTO payment (tripId, paymentType, amount, paymentDate, currency)
+    VALUES (?, ?, ?, ?, 'ZAR')
   `;
 
   try {
