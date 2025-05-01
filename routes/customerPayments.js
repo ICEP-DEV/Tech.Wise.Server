@@ -224,7 +224,7 @@ router.get('/customer-cards/:user_id', async (req, res, next) => {
   const user_id = req.params.user_id;
 
   const query = `
-    SELECT id, card_type, last_four_digits, is_selected
+    SELECT *
     FROM user_card_details
     WHERE user_id = ?
   `;
