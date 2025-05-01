@@ -282,6 +282,7 @@ router.put('/customer-card/select', async (req, res) => {
 
 //endpoint to innitialize payment with paystack
 // POST /initialize-payment automatic pay driver using saved card or new card and charging the customer
+// POST /initialize-payment automatic pay driver using saved card or new card and charging the customer
 router.post('/initialize-payment', async (req, res) => {
   const { email, amount, user_id, driverId } = req.body;
 
@@ -332,6 +333,10 @@ router.post('/initialize-payment', async (req, res) => {
 
       console.log('Charge response:', chargeResponse.data);
 
+      // Verify the transaction
+      const verificationResult = await verifyTransaction(chargeResponse.data.data.reference);
+      console.log('Transaction verification result:', verificationResult);
+
       return res.json({
         message: 'Payment charged using saved card',
         charged: true,
@@ -358,6 +363,10 @@ router.post('/initialize-payment', async (req, res) => {
 
     console.log('Payment initialized:', initResponse.data);
 
+    // Verify the transaction after initialization
+    const verificationResult = await verifyTransaction(initResponse.data.data.reference);
+    console.log('Transaction verification result:', verificationResult);
+
     return res.json({
       message: 'Payment initialized for new card',
       charged: false,
@@ -369,6 +378,36 @@ router.post('/initialize-payment', async (req, res) => {
     res.status(500).json({ error: 'Payment processing failed' });
   }
 });
+
+// Function to verify the payment using Paystack's API
+const verifyTransaction = async (transactionReference) => {
+  try {
+    const response = await axios.get(
+      `https://api.paystack.co/transaction/verify/${transactionReference}`,
+      {
+        headers: {
+          Authorization: `Bearer ${PAYSTACK_SECRET_KEY}`,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+    
+    const transactionData = response.data.data;
+    console.log('Verified Transaction:', transactionData);
+    
+    // Check if the payment was routed to the subaccount
+    if (transactionData.subaccount) {
+      console.log('Payment was routed to subaccount:', transactionData.subaccount);
+    } else {
+      console.log('Payment was not routed to a subaccount.');
+    }
+    
+    return response.data;
+  } catch (error) {
+    console.error('Error verifying payment:', error);
+    throw new Error('Transaction verification failed');
+  }
+};
 
 // Endpoint to handle Paystack payment verification
 router.get('/verify-payment/:reference', async (req, res) => {
