@@ -281,16 +281,29 @@ router.put('/customer-card/select', async (req, res) => {
 });
 
 //endpoint to innitialize payment with paystack
-// POST /initialize-payment automatic charge using saved card or new card
+// POST /initialize-payment automatic charge driver using saved card or new card
 router.post('/initialize-payment', async (req, res) => {
-  const { email, amount, user_id } = req.body;
+  const { email, amount, user_id, driverId } = req.body;
 
-  if (!email || !amount || !user_id) {
+  if (!email || !amount || !user_id || !driverId) {
     return res.status(400).json({ error: 'Missing required fields' });
   }
 
   try {
-    // ✅ 1️⃣ Check if user has saved card
+    // 1️⃣ 🔍 Get driver's subaccount_code
+    const [subaccountRows] = await pool.query(
+      `SELECT subaccount_code FROM subaccounts WHERE user_id = ? LIMIT 1`,
+      [driverId]
+    );
+
+    if (subaccountRows.length === 0) {
+      return res.status(404).json({ error: 'Driver subaccount not found' });
+    }
+
+    const subaccount_code = subaccountRows[0].subaccount_code;
+    console.log(`Found driver subaccount_code: ${subaccount_code}`);
+
+    // 2️⃣ ✅ Check if user has saved card
     const [savedCards] = await pool.query(
       `SELECT authorization_code FROM user_card_details WHERE user_id = ? AND is_selected = 1 AND authorization_code IS NOT NULL`,
       [user_id]
@@ -300,13 +313,14 @@ router.post('/initialize-payment', async (req, res) => {
       const authorization_code = savedCards[0].authorization_code;
       console.log(`Found saved card for user ${user_id}: authorization_code = ${authorization_code}`);
 
-      // ✅ 2️⃣ Charge the saved authorization_code directly
+      // 3️⃣ 🔥 Charge saved card AND route to subaccount
       const chargeResponse = await axios.post(
         'https://api.paystack.co/transaction/charge_authorization',
         {
           email,
-          amount, // amount in kobo
+          amount,
           authorization_code,
+          subaccount: subaccount_code, // ✅ route split payment to subaccount
         },
         {
           headers: {
@@ -325,13 +339,14 @@ router.post('/initialize-payment', async (req, res) => {
       });
     }
 
-    // ✅ 3️⃣ No saved card → initialize payment as usual
+    // 4️⃣ 🆕 No saved card → initialize payment (with subaccount split)
     const initResponse = await axios.post(
       'https://api.paystack.co/transaction/initialize',
       {
         email,
-        amount, // Must be in kobo for NGN (e.g. 1000 NGN = 100000)
-        callback_url: 'http://localhost:8081/PaymentSuccess', // Replace with your actual callback URL
+        amount,
+        callback_url: 'http://localhost:8081/PaymentSuccess', // your callback
+        subaccount: subaccount_code, // ✅ route split payment to subaccount
       },
       {
         headers: {
@@ -346,7 +361,7 @@ router.post('/initialize-payment', async (req, res) => {
     return res.json({
       message: 'Payment initialized for new card',
       charged: false,
-      data: initResponse.data.data, // Includes authorization_url etc.
+      data: initResponse.data.data, // includes authorization_url
     });
 
   } catch (error) {
