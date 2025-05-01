@@ -482,30 +482,27 @@ router.post('/customer-payment', async (req, res) => {
 });
 
 // PUT /payments/user/:user_id/status
-router.put('/payments/user/:user_id/status', async (req, res) => {
-  const { user_id } = req.params;
-
-  if (!user_id) {
-    return res.status(400).json({ message: "User ID is required" });
-  }
-
-  const sql = `
-    UPDATE payment
-    SET payment_status = 'success'
-    WHERE user_id = ?
-  `;
+// PUT endpoint to update payment_status to 'success' by userId and tripId
+router.put('/payments/user/:userId/trip/:tripId/status', async (req, res) => {
+  const { userId, tripId } = req.params;
 
   try {
-    const [result] = await pool.query(sql, [user_id]);
+    const sql = `
+      UPDATE payment
+      SET payment_status = 'success'
+      WHERE user_id = ? AND tripId = ?
+    `;
 
-    if (result.affectedRows > 0) {
-      res.json({ message: "Payment status updated to success" });
-    } else {
-      res.status(404).json({ message: "No payment record found for user" });
+    const [result] = await pool.query(sql, [userId, tripId]);
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: 'Payment not found for this user and trip' });
     }
+
+    res.status(200).json({ message: 'Payment status updated to success' });
   } catch (error) {
-    console.error("Error updating payment status:", error);
-    res.status(500).json({ message: "Internal server error" });
+    console.error('Error updating payment status:', error);
+    res.status(500).json({ message: 'Internal server error' });
   }
 });
 
