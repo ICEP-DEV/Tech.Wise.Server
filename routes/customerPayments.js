@@ -281,17 +281,57 @@ router.put('/customer-card/select', async (req, res) => {
 });
 
 //endpoint to innitialize payment with paystack
-// POST /initialize-payment
+// POST /initialize-payment automatic charge using saved card or new card
 router.post('/initialize-payment', async (req, res) => {
-  const { email, amount } = req.body;
+  const { email, amount, user_id } = req.body;
+
+  if (!email || !amount || !user_id) {
+    return res.status(400).json({ error: 'Missing required fields' });
+  }
 
   try {
-    const response = await axios.post(
+    // ✅ 1️⃣ Check if user has saved card
+    const [savedCards] = await pool.query(
+      `SELECT authorization_code FROM user_card_details WHERE user_id = ? AND is_selected = 1 AND authorization_code IS NOT NULL`,
+      [user_id]
+    );
+
+    if (savedCards.length > 0) {
+      const authorization_code = savedCards[0].authorization_code;
+      console.log(`Found saved card for user ${user_id}: authorization_code = ${authorization_code}`);
+
+      // ✅ 2️⃣ Charge the saved authorization_code directly
+      const chargeResponse = await axios.post(
+        'https://api.paystack.co/transaction/charge_authorization',
+        {
+          email,
+          amount, // amount in kobo
+          authorization_code,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${PAYSTACK_SECRET_KEY}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      console.log('Charge response:', chargeResponse.data);
+
+      return res.json({
+        message: 'Payment charged using saved card',
+        charged: true,
+        data: chargeResponse.data.data,
+      });
+    }
+
+    // ✅ 3️⃣ No saved card → initialize payment as usual
+    const initResponse = await axios.post(
       'https://api.paystack.co/transaction/initialize',
       {
         email,
         amount, // Must be in kobo for NGN (e.g. 1000 NGN = 100000)
-        callback_url: 'http://localhost:8081/PaymentSuccess' // Replace with your actual callback URL
+        callback_url: 'http://localhost:8081/PaymentSuccess', // Replace with your actual callback URL
       },
       {
         headers: {
@@ -301,13 +341,20 @@ router.post('/initialize-payment', async (req, res) => {
       }
     );
 
-    console.log('Payment initialized:', response.data);
-    res.json(response.data);
+    console.log('Payment initialized:', initResponse.data);
+
+    return res.json({
+      message: 'Payment initialized for new card',
+      charged: false,
+      data: initResponse.data.data, // Includes authorization_url etc.
+    });
+
   } catch (error) {
-    console.error('Error initializing payment:', error.response?.data || error.message);
-    res.status(500).json({ error: 'Payment initialization failed' });
+    console.error('Payment error:', error.response?.data || error.message);
+    res.status(500).json({ error: 'Payment processing failed' });
   }
 });
+
 // Endpoint to handle Paystack payment verification
 router.get('/verify-payment/:reference', async (req, res) => {
   const { reference } = req.params;
