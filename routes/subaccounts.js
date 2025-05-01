@@ -52,30 +52,98 @@ router.post("/create-subaccount", async (req, res) => {
         return res.status(500).json({ error: error.response?.data || "An error occurred" });
     }
 });
-
-// Store subaccount details into the database using connection pool
-router.post('/store-subaccount', async (req, res) => {
-    const { user_id, subaccount_code, business_name, settlement_bank, currency, percentage_charge, active, created_at, updated_at } = req.body;
-
-    const query = `INSERT INTO subaccounts (user_id, subaccount_code, business_name, settlement_bank, currency, percentage_charge, is_verified, created_at, updated_at) 
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
-
+// check if subaccount exists endpoint
+router.get('/check-subaccount', async (req, res) => {
+    const { user_id } = req.query;
     try {
-        await new Promise((resolve, reject) => {
-            pool.query(query, [user_id, subaccount_code, business_name, settlement_bank, currency, percentage_charge, active, created_at, updated_at], (error, results) => {
-                if (error) {
-                    console.error("DB Error:", error);
-                    reject(error);
-                }
-                resolve(results);
-            });
-        });
-
-        res.status(200).json({ message: "Subaccount data saved successfully" });
+      const [rows] = await pool.query('SELECT subaccount_code FROM subaccounts WHERE user_id = ?', [user_id]);
+      if (rows.length > 0) {
+        res.json({ exists: true });
+      } else {
+        res.json({ exists: false });
+      }
     } catch (error) {
-        res.status(500).json({ message: "Error saving subaccount data" });
+      console.error('Error checking subaccount:', error);
+      res.status(500).json({ error: 'Internal server error' });
     }
-});
+  });
+  
+// ✅ Store subaccount → insert or update if exists
+router.post('/store-subaccount', async (req, res) => {
+    const {
+      user_id,
+      subaccount_code,
+      business_name,
+      settlement_bank,
+      currency,
+      percentage_charge,
+      active, // 👈 assuming 'active' means 'is_verified'
+      created_at,
+      updated_at,
+    } = req.body;
+  
+    try {
+      const [rows] = await pool.query(
+        'SELECT id FROM subaccounts WHERE subaccount_code = ? LIMIT 1',
+        [subaccount_code]
+      );
+  
+      if (rows.length > 0) {
+        // ✅ subaccount_code exists → update row
+        const updateQuery = `
+          UPDATE subaccounts SET
+            user_id = ?,
+            business_name = ?,
+            settlement_bank = ?,
+            currency = ?,
+            percentage_charge = ?,
+            is_verified = ?,
+            updated_at = ?
+          WHERE subaccount_code = ?
+        `;
+  
+        await pool.query(updateQuery, [
+          user_id,
+          business_name,
+          settlement_bank,
+          currency,
+          percentage_charge,
+          active,         // 👈 this maps to is_verified
+          updated_at,
+          subaccount_code
+        ]);
+  
+        return res.status(200).json({ message: 'Subaccount updated successfully' });
+      } else {
+        // ✅ subaccount_code does not exist → insert row
+        const insertQuery = `
+          INSERT INTO subaccounts (
+            user_id, subaccount_code, business_name, settlement_bank,
+            currency, percentage_charge, is_verified, created_at, updated_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `;
+  
+        await pool.query(insertQuery, [
+          user_id,
+          subaccount_code,
+          business_name,
+          settlement_bank,
+          currency,
+          percentage_charge,
+          active,        // 👈 maps to is_verified
+          created_at,
+          updated_at
+        ]);
+  
+        return res.status(200).json({ message: 'Subaccount inserted successfully' });
+      }
+    } catch (error) {
+      console.error('DB Error:', error);
+      return res.status(500).json({ message: 'Error storing subaccount data', error: error.message });
+    }
+  });
+  
+  
 
 // Resolve Account Endpoint
 router.get("/resolve-account", async (req, res) => {
