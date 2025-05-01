@@ -281,7 +281,7 @@ router.put('/customer-card/select', async (req, res) => {
 });
 
 //endpoint to innitialize payment with paystack
-// POST /initialize-payment automatic charge driver using saved card or new card
+// POST /initialize-payment automatic pay driver using saved card or new card and charging the customer
 router.post('/initialize-payment', async (req, res) => {
   const { email, amount, user_id, driverId } = req.body;
 
