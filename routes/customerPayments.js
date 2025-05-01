@@ -146,31 +146,38 @@ router.put('/update-customer-code', async (req, res) => {
 });
 
 // Endpoint to Fetch Customer Code for a specific user
+// Endpoint to fetch customer code for a specific user
 router.get('/user/:user_id/customer-code', async (req, res) => {
   const { user_id } = req.params;
 
-  // Validate that the user_id is provided
+  console.log('Fetching customer code for user_id:', user_id);
+
   if (!user_id) {
-    return res.status(400).json({ error: 'Missing required field: user_id' });
+    return res.status(400).json({ message: 'User ID is required' });
   }
+
+  const sql = `
+      SELECT customer_code
+      FROM users
+      WHERE id = ?
+  `;
 
   try {
-    // Query to get the customer code for the provided id
-    const query = `SELECT customer_code FROM users WHERE id = ?`;
-    const [customer] = await pool.query(query, [user_id]);
+    const startTime = Date.now();
+    const [rows] = await pool.query(sql, [user_id]);
+    console.log(`Query executed in ${Date.now() - startTime} ms`);
 
-    if (customer.length > 0) {
-      // If the customer code is found, return it
-      res.status(200).json({ customer_code: customer[0].customer_code });
+    if (rows.length > 0 && rows[0].customer_code) {
+      res.json({ customer_code: rows[0].customer_code });
     } else {
-      // If no customer code is found for the user_id
-      res.status(404).json({ error: 'Customer code not found, please complete your profile' });
+      res.status(404).json({ message: 'Customer code not found. Please complete your profile.' });
     }
   } catch (error) {
-    console.error("Failed to fetch customer code", error);
-    res.status(500).json({ error: "Failed to fetch customer code" });
+    console.error('Error executing query:', error);
+    res.status(500).json({ message: 'Internal server error' });
   }
 });
+
 
 
 
