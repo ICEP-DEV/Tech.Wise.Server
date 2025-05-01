@@ -145,7 +145,6 @@ router.put('/update-customer-code', async (req, res) => {
   }
 });
 
-// Endpoint to Fetch Customer Code for a specific user
 // Endpoint to fetch customer code for a specific user
 router.get('/user/:user_id/customer-code', async (req, res) => {
   const { user_id } = req.params;
@@ -167,10 +166,13 @@ router.get('/user/:user_id/customer-code', async (req, res) => {
     const [rows] = await pool.query(sql, [user_id]);
     console.log(`Query executed in ${Date.now() - startTime} ms`);
 
-    if (rows.length > 0 && rows[0].customer_code) {
-      res.json({ customer_code: rows[0].customer_code });
+    if (rows.length > 0) {
+      res.json({
+        customer_code: rows[0].customer_code || null, // return null if empty
+      });
     } else {
-      res.status(404).json({ message: 'Customer code not found. Please complete your profile.' });
+      // User not found in DB
+      res.status(404).json({ message: 'User not found' });
     }
   } catch (error) {
     console.error('Error executing query:', error);
