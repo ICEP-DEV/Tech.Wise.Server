@@ -541,12 +541,18 @@ router.post('/driver/startSession', async (req, res) => {
             [userId, new Date()]
         );
 
-        res.status(200).json({ message: 'Session started successfully' });
+        const session_id = result[0]?.insertId; // MySQL2 returns an array with insert info in index 0
+
+        res.status(200).json({
+            message: 'Session started successfully',
+            session_id: session_id
+        });
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: 'Failed to start session.' });
     }
 });
+
 // Express route to fetch active session start time for a driver
 router.get('/driver/activeSession/:userId', async (req, res) => {
     const { userId } = req.params;
