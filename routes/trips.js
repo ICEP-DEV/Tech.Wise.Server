@@ -486,7 +486,7 @@ router.put('/updateDriverState', async (req, res) => {
 });
   
   
-// Update driver status
+// new==========
 // Update driver state with check
 router.put('/driver/updateStatus', async (req, res) => {
     const { userId, state } = req.body;
@@ -527,7 +527,41 @@ router.put('/driver/updateStatus', async (req, res) => {
       return res.status(500).json({ message: 'Internal server error' });
     }
   });
+  // Endpoint to start a driver session
+  router.post('/driver/startSession', async (req, res) => {
+    const { userId } = req.body;
   
+    if (!userId) {
+      return res.status(400).json({ error: 'User ID is required.' });
+    }
+  
+    try {
+      const result = await pool.query(
+        'INSERT INTO driver_sessions (user_id, start_time) VALUES (?, ?)',
+        [userId, new Date()]
+      );
+  
+      res.status(200).json({ message: 'Session started successfully' });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: 'Failed to start session.' });
+    }
+  });
+// Express route to fetch active session start time for a driver
+router.get('/driver/activeSession/:userId', async (req, res) => {
+    const { userId } = req.params;
+    const [session] = await pool.query(
+      `SELECT start_time FROM driver_sessions WHERE user_id = ? AND end_time IS NULL ORDER BY start_time DESC LIMIT 1`,
+      [userId]
+    );
+    if (session.length === 0) {
+      return res.status(404).json({ error: 'No active session' });
+    }
+    res.json({ start_time: session[0].start_time });
+  });
+  
+
+//   ======================
  
   // Get driver state and online_time
   router.get('/getDriverState', async (req, res) => {
