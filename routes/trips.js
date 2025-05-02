@@ -486,7 +486,43 @@ router.put('/updateDriverState', async (req, res) => {
 });
   
   
-
+// Update driver status
+router.put('/driver/updateStatus', async (req, res) => {
+    const { userId, state } = req.body;
+  
+    if (!userId || !state) {
+      return res.status(400).json({ message: 'Required fields are missing' });
+    }
+  
+    // SQL query to update the driver state
+    const sql = `
+      UPDATE driver
+      SET state = ?
+      WHERE id = ?
+    `;
+  
+    try {
+      const startTime = Date.now();
+  
+      // Execute the query
+      const [result] = await pool.query(sql, [state, userId]);
+  
+      const queryDuration = Date.now() - startTime;
+      console.log('Query executed in:', queryDuration, 'ms');
+  
+      if (result.affectedRows > 0) {
+        console.log('Driver state updated successfully');
+        res.status(200).json({ message: 'Driver state updated successfully' });
+      } else {
+        console.log('Driver not found');
+        res.status(404).json({ message: 'Driver not found' });
+      }
+    } catch (error) {
+      console.error('Error updating driver state:', error);
+      return res.status(500).json({ message: 'Internal server error' });
+    }
+  });
+  
  
   // Get driver state and online_time
   router.get('/getDriverState', async (req, res) => {
