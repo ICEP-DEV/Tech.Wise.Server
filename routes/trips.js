@@ -536,9 +536,10 @@ router.post('/driver/startSession', async (req, res) => {
     }
 
     try {
+        // Insert with current date for created_at, start_time is still set manually
         const [rows] = await pool.query(
-            'INSERT INTO driver_sessions (user_id, start_time) VALUES (?, ?)',
-            [userId, new Date()]
+            'INSERT INTO driver_sessions (user_id, start_time, created_at) VALUES (?, ?, ?)',
+            [userId, new Date(), new Date()] // Setting both start_time and created_at to now
         );
 
         const session_id = rows.insertId;
