@@ -571,12 +571,12 @@ router.get('/driver/activeSession/:userId', async (req, res) => {
     res.json({ start_time: session[0].start_time });
 });
 
-// Endpoint to end a driver session
+// Endpoint to end a driver sessions
 router.put('/endDriverSession', async (req, res) => {
     const { session_id, end_time } = req.body
     try {
         const [result] = await pool.query(
-            "UPDATE driver_session SET end_time = ?, updated_at = NOW() WHERE id = ?",
+            "UPDATE driver_sessions SET end_time = ?, updated_at = NOW() WHERE id = ?",
             [end_time, session_id]
         )
         res.json({ message: "end_time updated", affectedRows: result.affectedRows })
