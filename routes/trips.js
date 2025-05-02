@@ -588,16 +588,15 @@ router.put('/endDriverSession', async (req, res) => {
 })
 
 // Express route to fetch active session start time and end time for a driver
+// Server Route Example:
 router.get('/driver/activeSession/:userId', async (req, res) => {
     const { userId } = req.params;
     try {
-        // Fetch the most recent active session where `end_time` is NULL (active session)
         const [session] = await pool.query(
-            `SELECT start_time, end_time FROM driver_sessions WHERE user_id = ? AND (end_time IS NULL) ORDER BY start_time DESC LIMIT 1`,
+            `SELECT start_time, end_time FROM driver_sessions WHERE user_id = ? AND end_time IS NULL ORDER BY start_time DESC LIMIT 1`,
             [userId]
         );
 
-        // Check if there is no active session
         if (session.length === 0) {
             return res.status(404).json({ error: 'No active session' });
         }
@@ -605,13 +604,13 @@ router.get('/driver/activeSession/:userId', async (req, res) => {
         const startTime = new Date(session[0].start_time);
         const endTime = session[0].end_time ? new Date(session[0].end_time) : null;
 
-        // If the session is active (end_time is NULL), calculate the remaining time based on the current time
-        const remainingTime = endTime ? 0 : calculateRemainingTime(startTime); // Calculate remaining time if session is still active
+        // Calculate the remaining time if end_time is null
+        const remainingTime = endTime ? 0 : calculateRemainingTime(startTime);  // Calculate remaining time if session is still active
 
         res.json({
             start_time: session[0].start_time,
             end_time: session[0].end_time,
-            remaining_time: remainingTime, // this will be 0 if the session is finished
+            remaining_time: remainingTime,
         });
 
     } catch (error) {
@@ -620,13 +619,14 @@ router.get('/driver/activeSession/:userId', async (req, res) => {
     }
 });
 
+
 // Helper function to calculate remaining time if the session is still active
-const calculateRemainingTime = (startTime) => {
+function calculateRemainingTime(startTime) {
     const now = new Date();
-    const elapsed = now - startTime; // Difference between current time and start time in milliseconds
-    const remainingTime = Math.max(0, elapsed); // Ensure the remaining time is non-negative
-    return Math.floor(remainingTime / 1000); // Return time in seconds
-};
+    const remainingTime = Math.floor((now - startTime) / 1000); // Calculate the remaining time in seconds
+    return remainingTime;
+}
+
 
 //   ======================
 
