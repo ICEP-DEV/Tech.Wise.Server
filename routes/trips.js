@@ -487,6 +487,7 @@ router.put('/updateDriverState', async (req, res) => {
   
   
 // Update driver status
+// Update driver state with check
 router.put('/driver/updateStatus', async (req, res) => {
     const { userId, state } = req.body;
   
@@ -494,28 +495,32 @@ router.put('/driver/updateStatus', async (req, res) => {
       return res.status(400).json({ message: 'Required fields are missing' });
     }
   
-    // SQL query to update the driver state
-    const sql = `
-      UPDATE driver
-      SET state = ?
-      WHERE users_id = ?
-    `;
-  
     try {
-      const startTime = Date.now();
+      // Check current state first
+      const [rows] = await pool.query(`SELECT state FROM driver WHERE users_id = ?`, [userId]);
   
-      // Execute the query
-      const [result] = await pool.query(sql, [state, userId]);
+      if (rows.length === 0) {
+        return res.status(404).json({ message: 'Driver not found' });
+      }
   
-      const queryDuration = Date.now() - startTime;
-      console.log('Query executed in:', queryDuration, 'ms');
+      const currentState = rows[0].state;
+  
+      if (currentState === 'online') {
+        console.log('Driver is already online');
+        return res.status(200).json({ message: 'Already online', alreadyOnline: true });
+      }
+  
+      // If not online, update the state
+      const [result] = await pool.query(
+        `UPDATE driver SET state = ? WHERE users_id = ?`,
+        [state, userId]
+      );
   
       if (result.affectedRows > 0) {
-        console.log('Driver state updated successfully');
-        res.status(200).json({ message: 'Driver state updated successfully' });
+        console.log('Driver state updated to online');
+        return res.status(200).json({ message: 'Driver state updated to online', alreadyOnline: false });
       } else {
-        console.log('Driver not found');
-        res.status(404).json({ message: 'Driver not found' });
+        return res.status(404).json({ message: 'Driver not found' });
       }
     } catch (error) {
       console.error('Error updating driver state:', error);
