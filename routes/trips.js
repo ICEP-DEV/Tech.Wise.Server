@@ -536,12 +536,16 @@ router.post('/driver/startSession', async (req, res) => {
     }
 
     try {
-        const result = await pool.query(
+        const [rows] = await pool.query(
             'INSERT INTO driver_sessions (user_id, start_time) VALUES (?, ?)',
             [userId, new Date()]
         );
 
-        const session_id = result[0]?.insertId; // MySQL2 returns an array with insert info in index 0
+        const session_id = rows.insertId;
+
+        if (!session_id) {
+            return res.status(500).json({ error: 'No session_id generated.' });
+        }
 
         res.status(200).json({
             message: 'Session started successfully',
@@ -552,6 +556,7 @@ router.post('/driver/startSession', async (req, res) => {
         res.status(500).json({ error: 'Failed to start session.' });
     }
 });
+
 
 // Express route to fetch active session start time for a driver
 router.get('/driver/activeSession/:userId', async (req, res) => {
