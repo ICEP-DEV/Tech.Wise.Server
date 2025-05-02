@@ -104,63 +104,63 @@ router.post('/trips', async (req, res) => {
 router.get('/allTrips', async (req, res) => {
     const status = req.query.status;
     const driverId = req.query.driverId;
-  
+
     let query = `SELECT * FROM trips`;
     const queryParams = [];
-  
+
     // Build WHERE clause
     if (status && driverId) {
-      query += ` WHERE statuses = ? AND driverId = ?`;
-      queryParams.push(status, driverId);
+        query += ` WHERE statuses = ? AND driverId = ?`;
+        queryParams.push(status, driverId);
     } else if (status) {
-      query += ` WHERE statuses = ?`;
-      queryParams.push(status);
+        query += ` WHERE statuses = ?`;
+        queryParams.push(status);
     } else if (driverId) {
-      query += ` WHERE driverId = ?`;
-      queryParams.push(driverId);
+        query += ` WHERE driverId = ?`;
+        queryParams.push(driverId);
     }
-  
+
     try {
-      const [rows] = await pool.query(query, queryParams);
-      console.log("Fetched Trips with Filters");
-      res.json(rows);
+        const [rows] = await pool.query(query, queryParams);
+        console.log("Fetched Trips with Filters");
+        res.json(rows);
     } catch (error) {
-      console.error('Error fetching trips:', error);
-      res.status(500).send('Error fetching trips');
+        console.error('Error fetching trips:', error);
+        res.status(500).send('Error fetching trips');
     }
-  });
+});
 
 // Endpoint to fetch trips by custoer or driver id and status
 router.get('/tripHistory/:userId', async (req, res) => {
-  const userId = req.params.userId;
-  const status = req.query.status;
+    const userId = req.params.userId;
+    const status = req.query.status;
 
-  let query = `
+    let query = `
     SELECT * FROM trips
     WHERE (customerId = ? OR driverId = ?)
   `;
-  const queryParams = [userId, userId];
+    const queryParams = [userId, userId];
 
-  if (status) {
-    query += ` AND statuses = ?`;
-    queryParams.push(status);
-  }
+    if (status) {
+        query += ` AND statuses = ?`;
+        queryParams.push(status);
+    }
 
-  try {
-    const [rows] = await pool.query(query, queryParams);
+    try {
+        const [rows] = await pool.query(query, queryParams);
 
-    console.log("Fetched Trips for userId:", userId);
-    console.log("Status filter:", status);
-    console.log("Results:", rows);
+        console.log("Fetched Trips for userId:", userId);
+        console.log("Status filter:", status);
+        console.log("Results:", rows);
 
-    res.json(rows);
-  } catch (error) {
-    console.error('Error fetching trips:', error);
-    res.status(500).send('Error fetching trips');
-  }
+        res.json(rows);
+    } catch (error) {
+        console.error('Error fetching trips:', error);
+        res.status(500).send('Error fetching trips');
+    }
 });
 
-  
+
 
 // Endpoint to update real-time location in Firestore
 router.post('/trips/update-location', async (req, res) => {
@@ -412,218 +412,232 @@ router.post("/messages", async (req, res) => {
 
 // Put method to update driver state
 router.put('/updateDriverState', async (req, res) => {
-  const { user_id, state } = req.body;
+    const { user_id, state } = req.body;
 
-  if (!user_id || !state) {
-      return res.status(400).json({ message: 'User ID and state are required' });
-  }
+    if (!user_id || !state) {
+        return res.status(400).json({ message: 'User ID and state are required' });
+    }
 
-  try {
-      // 1. Get current driver state
-      const [driverRows] = await pool.query(
-          'SELECT state, online_time, last_online_timestamp FROM driver WHERE users_id = ?',
-          [user_id]
-      );
-   
-      if (driverRows.length === 0) {
-          return res.status(404).json({ message: 'Driver not found' });
-      }
+    try {
+        // 1. Get current driver state
+        const [driverRows] = await pool.query(
+            'SELECT state, online_time, last_online_timestamp FROM driver WHERE users_id = ?',
+            [user_id]
+        );
 
-      const { state: currentState, online_time, last_online_timestamp } = driverRows[0];
+        if (driverRows.length === 0) {
+            return res.status(404).json({ message: 'Driver not found' });
+        }
 
-      // 2. Prevent redundant state changes
-      if (currentState === state) {
-          return res.status(200).json({ message: 'Already in requested state' });
-      }
+        const { state: currentState, online_time, last_online_timestamp } = driverRows[0];
 
-      let sessionSeconds = 0; // Default value for sessionSeconds
+        // 2. Prevent redundant state changes
+        if (currentState === state) {
+            return res.status(200).json({ message: 'Already in requested state' });
+        }
 
-      // 3. Handle state transition
-      if (state === 'online') {
-          if (online_time >= 43200) {
-              return res.status(403).json({ message: '12-hour daily limit reached' });
-          }
+        let sessionSeconds = 0; // Default value for sessionSeconds
 
-          // Update only the timestamp
-          const [updateResult] = await pool.query(
-              'UPDATE driver SET state = ?, last_online_timestamp = NOW() WHERE users_id = ?',
-              [state, user_id]
-          );
-          console.log('Update Result:', updateResult);
-      }
-      else if (state === 'offline') {
-          if (last_online_timestamp) {
-              sessionSeconds = Math.floor(
-                  (Date.now() - new Date(last_online_timestamp).getTime()) / 1000
-              );
-              console.log('Last Online:', last_online_timestamp);
-              console.log('Session Duration (seconds):', sessionSeconds);
-          }
+        // 3. Handle state transition
+        if (state === 'online') {
+            if (online_time >= 43200) {
+                return res.status(403).json({ message: '12-hour daily limit reached' });
+            }
 
-          // Update online_time and log session
-          await pool.query(
-              'UPDATE driver SET state = ?, online_time = online_time + ? WHERE users_id = ?',
-              [state, sessionSeconds, user_id]
-          );
+            // Update only the timestamp
+            const [updateResult] = await pool.query(
+                'UPDATE driver SET state = ?, last_online_timestamp = NOW() WHERE users_id = ?',
+                [state, user_id]
+            );
+            console.log('Update Result:', updateResult);
+        }
+        else if (state === 'offline') {
+            if (last_online_timestamp) {
+                sessionSeconds = Math.floor(
+                    (Date.now() - new Date(last_online_timestamp).getTime()) / 1000
+                );
+                console.log('Last Online:', last_online_timestamp);
+                console.log('Session Duration (seconds):', sessionSeconds);
+            }
 
-          await pool.query(
-              'INSERT INTO driver_log (users_id, session_time) VALUES (?, ?)',
-              [user_id, sessionSeconds]
-          );
-      }
+            // Update online_time and log session
+            await pool.query(
+                'UPDATE driver SET state = ?, online_time = online_time + ? WHERE users_id = ?',
+                [state, sessionSeconds, user_id]
+            );
 
-      return res.status(200).json({
-          message: 'Status updated',
-          newState: state,
-          online_time: state === 'offline' ? online_time + sessionSeconds : online_time
-      });
+            await pool.query(
+                'INSERT INTO driver_log (users_id, session_time) VALUES (?, ?)',
+                [user_id, sessionSeconds]
+            );
+        }
 
-  } catch (error) {
-      console.error('Error details:', error.message);
-      console.error('Error stack trace:', error.stack);
-      return res.status(500).json({ message: 'Server error', error: error.message });
-  }
+        return res.status(200).json({
+            message: 'Status updated',
+            newState: state,
+            online_time: state === 'offline' ? online_time + sessionSeconds : online_time
+        });
+
+    } catch (error) {
+        console.error('Error details:', error.message);
+        console.error('Error stack trace:', error.stack);
+        return res.status(500).json({ message: 'Server error', error: error.message });
+    }
 });
-  
-  
+
+
 // new==========
 // Update driver state with check
 router.put('/driver/updateStatus', async (req, res) => {
     const { userId, state } = req.body;
-  
+
     if (!userId || !state) {
-      return res.status(400).json({ message: 'Required fields are missing' });
+        return res.status(400).json({ message: 'Required fields are missing' });
     }
-  
+
     try {
-      // Check current state first
-      const [rows] = await pool.query(`SELECT state FROM driver WHERE users_id = ?`, [userId]);
-  
-      if (rows.length === 0) {
-        return res.status(404).json({ message: 'Driver not found' });
-      }
-  
-      const currentState = rows[0].state;
-  
-      if (currentState === 'online') {
-        console.log('Driver is already online');
-        return res.status(200).json({ message: 'Already online', alreadyOnline: true });
-      }
-  
-      // If not online, update the state
-      const [result] = await pool.query(
-        `UPDATE driver SET state = ? WHERE users_id = ?`,
-        [state, userId]
-      );
-  
-      if (result.affectedRows > 0) {
-        console.log('Driver state updated to online');
-        return res.status(200).json({ message: 'Driver state updated to online', alreadyOnline: false });
-      } else {
-        return res.status(404).json({ message: 'Driver not found' });
-      }
+        // Check current state first
+        const [rows] = await pool.query(`SELECT state FROM driver WHERE users_id = ?`, [userId]);
+
+        if (rows.length === 0) {
+            return res.status(404).json({ message: 'Driver not found' });
+        }
+
+        const currentState = rows[0].state;
+
+        if (currentState === 'online') {
+            console.log('Driver is already online');
+            return res.status(200).json({ message: 'Already online', alreadyOnline: true });
+        }
+
+        // If not online, update the state
+        const [result] = await pool.query(
+            `UPDATE driver SET state = ? WHERE users_id = ?`,
+            [state, userId]
+        );
+
+        if (result.affectedRows > 0) {
+            console.log('Driver state updated to online');
+            return res.status(200).json({ message: 'Driver state updated to online', alreadyOnline: false });
+        } else {
+            return res.status(404).json({ message: 'Driver not found' });
+        }
     } catch (error) {
-      console.error('Error updating driver state:', error);
-      return res.status(500).json({ message: 'Internal server error' });
+        console.error('Error updating driver state:', error);
+        return res.status(500).json({ message: 'Internal server error' });
     }
-  });
-  // Endpoint to start a driver session
-  router.post('/driver/startSession', async (req, res) => {
+});
+// Endpoint to start a driver session
+router.post('/driver/startSession', async (req, res) => {
     const { userId } = req.body;
-  
+
     if (!userId) {
-      return res.status(400).json({ error: 'User ID is required.' });
+        return res.status(400).json({ error: 'User ID is required.' });
     }
-  
+
     try {
-      const result = await pool.query(
-        'INSERT INTO driver_sessions (user_id, start_time) VALUES (?, ?)',
-        [userId, new Date()]
-      );
-  
-      res.status(200).json({ message: 'Session started successfully' });
+        const result = await pool.query(
+            'INSERT INTO driver_sessions (user_id, start_time) VALUES (?, ?)',
+            [userId, new Date()]
+        );
+
+        res.status(200).json({ message: 'Session started successfully' });
     } catch (err) {
-      console.error(err);
-      res.status(500).json({ error: 'Failed to start session.' });
+        console.error(err);
+        res.status(500).json({ error: 'Failed to start session.' });
     }
-  });
+});
 // Express route to fetch active session start time for a driver
 router.get('/driver/activeSession/:userId', async (req, res) => {
     const { userId } = req.params;
     const [session] = await pool.query(
-      `SELECT start_time FROM driver_sessions WHERE user_id = ? AND end_time IS NULL ORDER BY start_time DESC LIMIT 1`,
-      [userId]
+        `SELECT start_time FROM driver_sessions WHERE user_id = ? AND end_time IS NULL ORDER BY start_time DESC LIMIT 1`,
+        [userId]
     );
     if (session.length === 0) {
-      return res.status(404).json({ error: 'No active session' });
+        return res.status(404).json({ error: 'No active session' });
     }
     res.json({ start_time: session[0].start_time });
-  });
-  
+});
+
+// Endpoint to end a driver session
+router.put('/endDriverSession', async (req, res) => {
+    const { session_id, end_time } = req.body
+    try {
+        const [result] = await pool.query(
+            "UPDATE driver_session SET end_time = ?, updated_at = NOW() WHERE id = ?",
+            [end_time, session_id]
+        )
+        res.json({ message: "end_time updated", affectedRows: result.affectedRows })
+    } catch (error) {
+        console.error(error)
+        res.status(500).json({ message: "Failed to update driver session." })
+    }
+})
 
 //   ======================
- 
-  // Get driver state and online_time
-  router.get('/getDriverState', async (req, res) => {
-      const userId = req.query.userId;
-      console.log('Fetching driver state for userId:', userId);
-    
-      if (!userId || userId.trim() === '') {
+
+// Get driver state and online_time
+router.get('/getDriverState', async (req, res) => {
+    const userId = req.query.userId;
+    console.log('Fetching driver state for userId:', userId);
+
+    if (!userId || userId.trim() === '') {
         return res.status(400).json({ message: 'User ID is required and cannot be empty' });
-      }
-    
-      const timeout = setTimeout(() => {
+    }
+
+    const timeout = setTimeout(() => {
         console.log('Request to get driver state timed out');
         return res.status(504).send('Gateway Timeout');
-      }, 15000); // 15 seconds
-    
-      try {
+    }, 15000); // 15 seconds
+
+    try {
         const query = 'SELECT state, online_time FROM driver WHERE users_id = ?';
         const [result] = await pool.query(query, [userId]);
-    
+
         clearTimeout(timeout);
-    
+
         if (result.length === 0) {
-          console.log(`Driver with userId ${userId} not found.`);
-          return res.status(404).json({ message: 'Driver not found' });
+            console.log(`Driver with userId ${userId} not found.`);
+            return res.status(404).json({ message: 'Driver not found' });
         }
-    
+
         const { state, online_time } = result[0];
         return res.json({ state, online_time });
-      } catch (err) {
+    } catch (err) {
         clearTimeout(timeout);
         console.error(`Error fetching driver state for userId ${userId}:`, err);
         return res.status(500).json({ message: 'Failed to fetch driver state', error: err.message });
-      }
-    });
+    }
+});
 
 // Endpoint to fetch driver log 
 router.get('/getDriverLog', async (req, res) => {
     const userId = req.query.userId;
-  
-    if (!userId) return res.status(400).json({ error: "User ID is required" });
-  
-    try {
-      const connection = await pool.getConnection(); // Get connection from pool
-  
-      const [rows] = await connection.query(
-        `SELECT session_time, log_date FROM driver_log WHERE users_id = ? ORDER BY log_date DESC LIMIT 10`,
-        [userId]
-      );
-  
-      connection.release(); // Don't forget to release the connection back to the pool
-  
-      // Optional: Calculate total session time
-      const totalSessionTime = rows.reduce((acc, log) => acc + log.session_time, 0);
-  
-      res.json({ logs: rows, totalSessionTime });
-    } catch (error) {
-      console.error("Error fetching session time:", error);
-      res.status(500).json({ error: "Failed to fetch session time" });
-    }
-  });
 
- 
+    if (!userId) return res.status(400).json({ error: "User ID is required" });
+
+    try {
+        const connection = await pool.getConnection(); // Get connection from pool
+
+        const [rows] = await connection.query(
+            `SELECT session_time, log_date FROM driver_log WHERE users_id = ? ORDER BY log_date DESC LIMIT 10`,
+            [userId]
+        );
+
+        connection.release(); // Don't forget to release the connection back to the pool
+
+        // Optional: Calculate total session time
+        const totalSessionTime = rows.reduce((acc, log) => acc + log.session_time, 0);
+
+        res.json({ logs: rows, totalSessionTime });
+    } catch (error) {
+        console.error("Error fetching session time:", error);
+        res.status(500).json({ error: "Failed to fetch session time" });
+    }
+});
+
+
 // Route to get Driver Trips based on status
 router.get('/getDriverTrips', async (req, res) => {
     const userId = req.query.userId;
@@ -669,7 +683,7 @@ router.get('/getDriverTrips', async (req, res) => {
         return res.status(500).json({ message: 'Failed to fetch trips', error: err.message });
     }
 });
-  
+
 //endpoint to fetch all trips
 
 
