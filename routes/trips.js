@@ -498,7 +498,7 @@ router.put('/driver/updateStatus', async (req, res) => {
     const sql = `
       UPDATE driver
       SET state = ?
-      WHERE id = ?
+      WHERE users_id = ?
     `;
   
     try {
