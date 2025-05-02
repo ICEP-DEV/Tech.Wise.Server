@@ -591,24 +591,27 @@ router.put('/endDriverSession', async (req, res) => {
 router.get('/driver/activeSession/:userId', async (req, res) => {
     const { userId } = req.params;
     try {
+        // Fetch the most recent active session where `end_time` is NULL (active session)
         const [session] = await pool.query(
-            `SELECT start_time, end_time FROM driver_sessions WHERE user_id = ? AND end_time IS NULL ORDER BY start_time DESC LIMIT 1`,
+            `SELECT start_time, end_time FROM driver_sessions WHERE user_id = ? AND (end_time IS NULL) ORDER BY start_time DESC LIMIT 1`,
             [userId]
         );
 
+        // Check if there is no active session
         if (session.length === 0) {
             return res.status(404).json({ error: 'No active session' });
         }
 
-        // Calculate the remaining time if end_time is null
         const startTime = new Date(session[0].start_time);
         const endTime = session[0].end_time ? new Date(session[0].end_time) : null;
-        const remainingTime = endTime ? 0 : calculateRemainingTime(startTime);  // Calculate remaining time if session is still active
+
+        // If the session is active (end_time is NULL), calculate the remaining time based on the current time
+        const remainingTime = endTime ? 0 : calculateRemainingTime(startTime); // Calculate remaining time if session is still active
 
         res.json({
             start_time: session[0].start_time,
             end_time: session[0].end_time,
-            remaining_time: remainingTime,
+            remaining_time: remainingTime, // this will be 0 if the session is finished
         });
 
     } catch (error) {
@@ -616,6 +619,14 @@ router.get('/driver/activeSession/:userId', async (req, res) => {
         return res.status(500).json({ error: 'Failed to fetch active session' });
     }
 });
+
+// Helper function to calculate remaining time if the session is still active
+const calculateRemainingTime = (startTime) => {
+    const now = new Date();
+    const elapsed = now - startTime; // Difference between current time and start time in milliseconds
+    const remainingTime = Math.max(0, elapsed); // Ensure the remaining time is non-negative
+    return Math.floor(remainingTime / 1000); // Return time in seconds
+};
 
 //   ======================
 
