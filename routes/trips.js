@@ -587,6 +587,36 @@ router.put('/endDriverSession', async (req, res) => {
     }
 })
 
+// Express route to fetch active session start time and end time for a driver
+router.get('/driver/activeSession/:userId', async (req, res) => {
+    const { userId } = req.params;
+    try {
+        const [session] = await pool.query(
+            `SELECT start_time, end_time FROM driver_sessions WHERE user_id = ? AND end_time IS NULL ORDER BY start_time DESC LIMIT 1`,
+            [userId]
+        );
+
+        if (session.length === 0) {
+            return res.status(404).json({ error: 'No active session' });
+        }
+
+        // Calculate the remaining time if end_time is null
+        const startTime = new Date(session[0].start_time);
+        const endTime = session[0].end_time ? new Date(session[0].end_time) : null;
+        const remainingTime = endTime ? 0 : calculateRemainingTime(startTime);  // Calculate remaining time if session is still active
+
+        res.json({
+            start_time: session[0].start_time,
+            end_time: session[0].end_time,
+            remaining_time: remainingTime,
+        });
+
+    } catch (error) {
+        console.error('Error fetching active session:', error);
+        return res.status(500).json({ error: 'Failed to fetch active session' });
+    }
+});
+
 //   ======================
 
 // Get driver state and online_time
