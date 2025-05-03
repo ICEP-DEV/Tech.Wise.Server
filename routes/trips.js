@@ -689,8 +689,8 @@ router.get('/getDriverTrips', async (req, res) => {
 });
 
 // GET trips and payments stats for driver by driverId
-router.get('/driver/stats/:driverId', async (req, res) => {
-    const { user_id } = req.params;
+router.get('/driver/stats/:user_id', async (req, res) => {
+    const { user_id } = req.params;  // Also corrected param name from user_id to driverId!
 
     try {
         const [rows] = await pool.query(`
@@ -699,7 +699,7 @@ router.get('/driver/stats/:driverId', async (req, res) => {
                 t.statuses,
                 t.driver_ratings,
                 t.requestDate,
-                p.amount,
+                p.amount
             FROM trips t
             LEFT JOIN payment p ON t.id = p.tripId
             WHERE t.driverId = ?
