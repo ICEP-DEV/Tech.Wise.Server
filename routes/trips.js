@@ -559,8 +559,7 @@ router.post('/driver/startSession', async (req, res) => {
 });
 
 
-// Endpoint to fetch total_seconds for latest session by user_id
-// Endpoint to fetch total_seconds for latest session by user_id always returns 0 if no session exists
+// Endpoint to fetch total_seconds by user_id for today (sum of all sessions)
 router.get('/driver/totalWorkedToday/:user_id', async (req, res) => {
     const { user_id } = req.params;
 
@@ -570,29 +569,24 @@ router.get('/driver/totalWorkedToday/:user_id', async (req, res) => {
 
     try {
         const [rows] = await pool.query(
-            `SELECT total_seconds
+            `SELECT COALESCE(SUM(total_seconds), 0) AS totalSeconds
              FROM driver_sessions
-             WHERE user_id = ?
-             ORDER BY id DESC
-             LIMIT 1`,
+             WHERE user_id = ? AND DATE(start_time) = CURDATE()`,
             [user_id]
         );
 
-        let totalSeconds = 0;  // default to 0
-
-        if (rows.length > 0) {
-            totalSeconds = rows[0].total_seconds;
-        }
+        const totalSeconds = rows.length > 0 ? rows[0].totalSeconds : 0;
 
         res.status(200).json({
             totalSeconds
         });
 
     } catch (err) {
-        console.error('Error fetching total_seconds for latest session:', err);
+        console.error('Error fetching total_seconds for user today:', err);
         res.status(500).json({ error: 'Failed to fetch total_seconds.' });
     }
 });
+
 
 
 
