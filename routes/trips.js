@@ -688,6 +688,31 @@ router.get('/getDriverTrips', async (req, res) => {
     }
 });
 
+// GET trips and payments stats for driver
+router.get('/driver/stats/:driverId', async (req, res) => {
+    const { driverId } = req.params;
+
+    try {
+        const [rows] = await pool.query(`
+            SELECT 
+                t.id AS tripId,
+                t.statuses,
+                t.driver_ratings,
+                t.requestDate,
+                p.amount,
+            FROM trips t
+            LEFT JOIN payment p ON t.id = p.tripId
+            WHERE t.driverId = ?
+        `, [driverId]);
+
+        res.json(rows);
+    } catch (err) {
+        console.error('Error fetching driver stats:', err);
+        res.status(500).json({ error: 'Failed to fetch stats' });
+    }
+});
+
+
 //endpoint to fetch all trips
 
 
