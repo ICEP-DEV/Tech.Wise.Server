@@ -618,6 +618,24 @@ router.get('/driver/remainingTime/:userId', async (req, res) => {
     }
 });
 
+// Endpoint to end a driver sessions
+router.put('/endDriverSession', async (req, res) => {
+    const { session_id, end_time, workedSeconds } = req.body
+    try {
+        const [result] = await pool.query(
+            "UPDATE driver_sessions SET end_time = ?, updated_at = NOW(), total_seconds = ? WHERE id = ?",
+            [end_time, session_id, workedSeconds] // Assuming workedSeconds is the total seconds worked
+        )
+        res.json({ message: "end_time updated", affectedRows: result.affectedRows })
+    } catch (error) {
+        console.error(error)
+        res.status(500).json({ message: "Failed to update driver session." })
+    }
+})
+
+
+
+
 
 // Express route to fetch active session start time for a driver
 router.get('/driver/activeSession/:userId', async (req, res) => {
@@ -631,22 +649,6 @@ router.get('/driver/activeSession/:userId', async (req, res) => {
     }
     res.json({ start_time: session[0].start_time });
 });
-
-// Endpoint to end a driver sessions
-router.put('/endDriverSession', async (req, res) => {
-    const { session_id, end_time } = req.body
-    try {
-        const [result] = await pool.query(
-            "UPDATE driver_sessions SET end_time = ?, updated_at = NOW() WHERE id = ?",
-            [end_time, session_id]
-        )
-        res.json({ message: "end_time updated", affectedRows: result.affectedRows })
-    } catch (error) {
-        console.error(error)
-        res.status(500).json({ message: "Failed to update driver session." })
-    }
-})
-
 // Express route to fetch active session start time and end time for a driver
 // Server Route Example:
 router.get('/driver/activeSession/:userId', async (req, res) => {
