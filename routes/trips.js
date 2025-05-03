@@ -587,39 +587,6 @@ router.get('/driver/totalWorkedToday/:user_id', async (req, res) => {
     }
 });
 
-
-
-
-// GET /driver/remainingTime/:userId
-// Endpoint to fetch remaining time for a driver today
-router.get('/driver/remainingTime/:userId', async (req, res) => {
-    const { userId } = req.params;
-
-    if (!userId) {
-        return res.status(400).json({ error: 'User ID is required.' });
-    }
-
-    try {
-        const [rows] = await pool.query(
-            `SELECT COALESCE(SUM(total_seconds), 0) AS totalWorkedToday
-             FROM driver_sessions
-             WHERE user_id = ? AND DATE(start_time) = CURDATE()`,
-            [userId]
-        );
-
-        const totalWorkedToday = rows.length > 0 ? rows[0].totalWorkedToday : 0;
-        const remainingSeconds = 43200 - totalWorkedToday; // 12 hours in seconds
-
-        res.status(200).json({
-            remainingSeconds: remainingSeconds < 0 ? 0 : remainingSeconds
-        });
-
-    } catch (err) {
-        console.error('Error fetching remaining time:', err);
-        res.status(500).json({ error: 'Failed to fetch remaining time.' });
-    }
-});
-
 // Endpoint to end a driver sessions
 router.put('/endDriverSession', async (req, res) => {
     const { session_id, end_time } = req.body;
@@ -638,66 +605,6 @@ router.put('/endDriverSession', async (req, res) => {
     }
 });
 
-
-
-
-
-
-
-// Express route to fetch active session start time for a driver
-router.get('/driver/activeSession/:userId', async (req, res) => {
-    const { userId } = req.params;
-    const [session] = await pool.query(
-        `SELECT start_time FROM driver_sessions WHERE user_id = ? AND end_time IS NULL ORDER BY start_time DESC LIMIT 1`,
-        [userId]
-    );
-    if (session.length === 0) {
-        return res.status(404).json({ error: 'No active session' });
-    }
-    res.json({ start_time: session[0].start_time });
-});
-// Express route to fetch active session start time and end time for a driver
-// Server Route Example:
-router.get('/driver/activeSession/:userId', async (req, res) => {
-    const { userId } = req.params;
-    try {
-        const [session] = await pool.query(
-            `SELECT start_time, end_time FROM driver_sessions WHERE user_id = ? AND end_time IS NULL ORDER BY start_time DESC LIMIT 1`,
-            [userId]
-        );
-
-        if (session.length === 0) {
-            return res.status(404).json({ error: 'No active session' });
-        }
-
-        const startTime = new Date(session[0].start_time);
-        const endTime = session[0].end_time ? new Date(session[0].end_time) : null;
-
-        // Calculate the remaining time if end_time is null
-        const remainingTime = endTime ? 0 : calculateRemainingTime(startTime);  // Calculate remaining time if session is still active
-
-        res.json({
-            start_time: session[0].start_time,
-            end_time: session[0].end_time,
-            remaining_time: remainingTime,
-        });
-
-    } catch (error) {
-        console.error('Error fetching active session:', error);
-        return res.status(500).json({ error: 'Failed to fetch active session' });
-    }
-});
-
-
-// Helper function to calculate remaining time if the session is still active
-function calculateRemainingTime(startTime) {
-    const now = new Date();
-    const remainingTime = Math.floor((now - startTime) / 1000); // Calculate the remaining time in seconds
-    return remainingTime;
-}
-
-
-//   ======================
 
 // Get driver state and online_time
 router.get('/getDriverState', async (req, res) => {
@@ -733,31 +640,6 @@ router.get('/getDriverState', async (req, res) => {
     }
 });
 
-// Endpoint to fetch driver log 
-router.get('/getDriverLog', async (req, res) => {
-    const userId = req.query.userId;
-
-    if (!userId) return res.status(400).json({ error: "User ID is required" });
-
-    try {
-        const connection = await pool.getConnection(); // Get connection from pool
-
-        const [rows] = await connection.query(
-            `SELECT session_time, log_date FROM driver_log WHERE users_id = ? ORDER BY log_date DESC LIMIT 10`,
-            [userId]
-        );
-
-        connection.release(); // Don't forget to release the connection back to the pool
-
-        // Optional: Calculate total session time
-        const totalSessionTime = rows.reduce((acc, log) => acc + log.session_time, 0);
-
-        res.json({ logs: rows, totalSessionTime });
-    } catch (error) {
-        console.error("Error fetching session time:", error);
-        res.status(500).json({ error: "Failed to fetch session time" });
-    }
-});
 
 
 // Route to get Driver Trips based on status
