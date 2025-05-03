@@ -560,6 +560,7 @@ router.post('/driver/startSession', async (req, res) => {
 
 
 // Endpoint to fetch total_seconds for latest session by user_id
+// Endpoint to fetch total_seconds for latest session by user_id always returns 0 if no session exists
 router.get('/driver/totalWorkedToday/:user_id', async (req, res) => {
     const { user_id } = req.params;
 
@@ -577,11 +578,11 @@ router.get('/driver/totalWorkedToday/:user_id', async (req, res) => {
             [user_id]
         );
 
-        if (rows.length === 0) {
-            return res.status(404).json({ error: 'No sessions found for user.' });
-        }
+        let totalSeconds = 0;  // default to 0
 
-        const totalSeconds = rows[0].total_seconds;
+        if (rows.length > 0) {
+            totalSeconds = rows[0].total_seconds;
+        }
 
         res.status(200).json({
             totalSeconds
@@ -592,6 +593,7 @@ router.get('/driver/totalWorkedToday/:user_id', async (req, res) => {
         res.status(500).json({ error: 'Failed to fetch total_seconds.' });
     }
 });
+
 
 
 // GET /driver/remainingTime/:userId
