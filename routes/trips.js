@@ -623,7 +623,11 @@ router.put('/endDriverSession', async (req, res) => {
     const { session_id, end_time, workedSeconds } = req.body
     try {
         const [result] = await pool.query(
-            "UPDATE driver_sessions SET end_time = ?, updated_at = NOW(), total_seconds = ? WHERE id = ?",
+            `UPDATE driver_sessions
+            SET end_time = NOW(),
+                total_seconds = TIMESTAMPDIFF(SECOND, start_time, NOW())
+            WHERE user_id = ? AND end_time IS NULL
+            ORDER BY start_time DESC LIMIT 1`
             [end_time, session_id, workedSeconds] // Assuming workedSeconds is the total seconds worked
         )
         res.json({ message: "end_time updated", affectedRows: result.affectedRows })
