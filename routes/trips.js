@@ -559,6 +559,35 @@ router.post('/driver/startSession', async (req, res) => {
 });
 
 
+// GET /driver/totalWorkedToday/:userId
+// Endpoint to fetch total worked time for a driver today
+router.get('/driver/totalWorkedToday/:userId', async (req, res) => {
+    const { userId } = req.params;
+
+    if (!userId) {
+        return res.status(400).json({ error: 'User ID is required.' });
+    }
+
+    try {
+        const [rows] = await pool.query(
+            `SELECT COALESCE(SUM(total_seconds), 0) AS totalWorkedToday
+             FROM driver_sessions
+             WHERE user_id = ? AND DATE(start_time) = CURDATE()`,
+            [userId]
+        );
+
+        const totalWorkedToday = rows.length > 0 ? rows[0].totalWorkedToday : 0;
+
+        res.status(200).json({
+            totalWorkedToday
+        });
+
+    } catch (err) {
+        console.error('Error fetching total worked today:', err);
+        res.status(500).json({ error: 'Failed to fetch total worked today.' });
+    }
+});
+
 // Express route to fetch active session start time for a driver
 router.get('/driver/activeSession/:userId', async (req, res) => {
     const { userId } = req.params;
