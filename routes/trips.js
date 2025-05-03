@@ -561,7 +561,7 @@ router.post('/driver/startSession', async (req, res) => {
 
 // GET /driver/totalWorkedToday/:userId
 // Endpoint to fetch total worked time for a driver today
-router.get('/driver/sessionTotal/:sessionId', async (req, res) => {
+router.get('/driver/totalWorkedToday/:sessionId', async (req, res) => {
     const { sessionId } = req.params;
 
     if (!sessionId) {
