@@ -626,7 +626,7 @@ router.put('/endDriverSession', async (req, res) => {
             `UPDATE driver_sessions
              SET end_time = NOW(),
                  total_seconds = ?
-             WHERE session_id = ?`,
+             WHERE id = ?`,
             [workedSeconds, session_id]
         );
         res.json({ message: "end_time updated", affectedRows: result.affectedRows });
