@@ -588,6 +588,37 @@ router.get('/driver/totalWorkedToday/:userId', async (req, res) => {
     }
 });
 
+// GET /driver/remainingTime/:userId
+// Endpoint to fetch remaining time for a driver today
+router.get('/driver/remainingTime/:userId', async (req, res) => {
+    const { userId } = req.params;
+
+    if (!userId) {
+        return res.status(400).json({ error: 'User ID is required.' });
+    }
+
+    try {
+        const [rows] = await pool.query(
+            `SELECT COALESCE(SUM(total_seconds), 0) AS totalWorkedToday
+             FROM driver_sessions
+             WHERE user_id = ? AND DATE(start_time) = CURDATE()`,
+            [userId]
+        );
+
+        const totalWorkedToday = rows.length > 0 ? rows[0].totalWorkedToday : 0;
+        const remainingSeconds = 43200 - totalWorkedToday; // 12 hours in seconds
+
+        res.status(200).json({
+            remainingSeconds: remainingSeconds < 0 ? 0 : remainingSeconds
+        });
+
+    } catch (err) {
+        console.error('Error fetching remaining time:', err);
+        res.status(500).json({ error: 'Failed to fetch remaining time.' });
+    }
+});
+
+
 // Express route to fetch active session start time for a driver
 router.get('/driver/activeSession/:userId', async (req, res) => {
     const { userId } = req.params;
