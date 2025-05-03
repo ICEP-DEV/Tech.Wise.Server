@@ -703,8 +703,8 @@ router.get('/driver/stats/:user_id', async (req, res) => {
                 p.payment_status
             FROM trips t
             LEFT JOIN payment p ON t.id = p.tripId
-            WHERE t.driverId = ? and p.user_id = ?
-        `, [user_id, user_id]);
+            WHERE t.driverId = ?
+        `, [driverId]);
 
         res.json(rows);
     } catch (err) {
