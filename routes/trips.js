@@ -620,22 +620,21 @@ router.get('/driver/remainingTime/:userId', async (req, res) => {
 
 // Endpoint to end a driver sessions
 router.put('/endDriverSession', async (req, res) => {
-    const { session_id, end_time, workedSeconds } = req.body
+    const { session_id, end_time, workedSeconds } = req.body;
     try {
         const [result] = await pool.query(
             `UPDATE driver_sessions
-            SET end_time = NOW(),
-                total_seconds = TIMESTAMPDIFF(SECOND, start_time, NOW())
-            WHERE user_id = ? AND end_time IS NULL
-            ORDER BY start_time DESC LIMIT 1`
-            [end_time, session_id, workedSeconds] // Assuming workedSeconds is the total seconds worked
-        )
-        res.json({ message: "end_time updated", affectedRows: result.affectedRows })
+             SET end_time = NOW(),
+                 total_seconds = ?
+             WHERE session_id = ?`,
+            [workedSeconds, session_id]
+        );
+        res.json({ message: "end_time updated", affectedRows: result.affectedRows });
     } catch (error) {
-        console.error(error)
-        res.status(500).json({ message: "Failed to update driver session." })
+        console.error(error);
+        res.status(500).json({ message: "Failed to update driver session." });
     }
-})
+});
 
 
 
