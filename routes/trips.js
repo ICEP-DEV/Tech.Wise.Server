@@ -559,24 +559,26 @@ router.post('/driver/startSession', async (req, res) => {
 });
 
 
-// Endpoint to fetch total_seconds for a specific session
-router.get('/driver/totalWorkedToday/:session_id', async (req, res) => {
-    const { session_id } = req.params;
+// Endpoint to fetch total_seconds for latest session by user_id
+router.get('/driver/totalWorkedToday/:user_id', async (req, res) => {
+    const { user_id } = req.params;
 
-    if (!session_id) {
-        return res.status(400).json({ error: 'Session ID is required.' });
+    if (!user_id) {
+        return res.status(400).json({ error: 'User ID is required.' });
     }
 
     try {
         const [rows] = await pool.query(
             `SELECT total_seconds
              FROM driver_sessions
-             WHERE id = ?`,
-            [session_id]
+             WHERE user_id = ?
+             ORDER BY id DESC
+             LIMIT 1`,
+            [user_id]
         );
 
         if (rows.length === 0) {
-            return res.status(404).json({ error: 'Session not found.' });
+            return res.status(404).json({ error: 'No sessions found for user.' });
         }
 
         const totalSeconds = rows[0].total_seconds;
@@ -586,7 +588,7 @@ router.get('/driver/totalWorkedToday/:session_id', async (req, res) => {
         });
 
     } catch (err) {
-        console.error('Error fetching total_seconds for session:', err);
+        console.error('Error fetching total_seconds for latest session:', err);
         res.status(500).json({ error: 'Failed to fetch total_seconds.' });
     }
 });
