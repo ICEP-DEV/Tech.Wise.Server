@@ -559,12 +559,11 @@ router.post('/driver/startSession', async (req, res) => {
 });
 
 
-// GET /driver/totalWorkedToday/:userId
-// Endpoint to fetch total worked time for a driver today
-router.get('/driver/totalWorkedToday/:sessionId', async (req, res) => {
-    const { sessionId } = req.params;
+// Endpoint to fetch total_seconds for a specific session
+router.get('/driver/totalWorkedToday/:session_id', async (req, res) => {
+    const { session_id } = req.params;
 
-    if (!sessionId) {
+    if (!session_id) {
         return res.status(400).json({ error: 'Session ID is required.' });
     }
 
@@ -573,10 +572,14 @@ router.get('/driver/totalWorkedToday/:sessionId', async (req, res) => {
             `SELECT total_seconds
              FROM driver_sessions
              WHERE id = ?`,
-            [sessionId]
+            [session_id]
         );
 
-        const totalSeconds = rows.length > 0 ? rows[0].total_seconds : 0;
+        if (rows.length === 0) {
+            return res.status(404).json({ error: 'Session not found.' });
+        }
+
+        const totalSeconds = rows[0].total_seconds;
 
         res.status(200).json({
             totalSeconds
@@ -587,6 +590,7 @@ router.get('/driver/totalWorkedToday/:sessionId', async (req, res) => {
         res.status(500).json({ error: 'Failed to fetch total_seconds.' });
     }
 });
+
 
 // GET /driver/remainingTime/:userId
 // Endpoint to fetch remaining time for a driver today
