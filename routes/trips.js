@@ -588,10 +588,10 @@ router.get('/driver/totalWorkedToday/:user_id', async (req, res) => {
 });
 
 // Endpoint to fetch remaining time for a driver today
-router.get('/driver/remainingTime/:userId', async (req, res) => {
-    const { userId } = req.params;
+router.get('/driver/remainingTime/:user_id', async (req, res) => {
+    const { user_id } = req.params;
 
-    if (!userId) {
+    if (!user_id) {
         return res.status(400).json({ error: 'User ID is required.' });
     }
 
@@ -600,7 +600,7 @@ router.get('/driver/remainingTime/:userId', async (req, res) => {
             `SELECT COALESCE(SUM(total_seconds), 0) AS totalWorkedToday
              FROM driver_sessions
              WHERE user_id = ? AND DATE(start_time) = CURDATE()`,
-            [userId]
+            [user_id]
         );
 
         const totalWorkedToday = rows.length > 0 ? rows[0].totalWorkedToday : 0;
