@@ -587,6 +587,34 @@ router.get('/driver/totalWorkedToday/:user_id', async (req, res) => {
     }
 });
 
+// Endpoint to fetch remaining time for a driver today
+router.get('/driver/remainingTime/:userId', async (req, res) => {
+    const { userId } = req.params;
+
+    if (!userId) {
+        return res.status(400).json({ error: 'User ID is required.' });
+    }
+
+    try {
+        const [rows] = await pool.query(
+            SELECT COALESCE(SUM(total_seconds), 0) AS totalWorkedToday
+             FROM driver_sessions
+             WHERE user_id = ? AND DATE(start_time) = CURDATE(),
+            [userId]
+        );
+
+        const totalWorkedToday = rows.length > 0 ? rows[0].totalWorkedToday : 0;
+        const remainingSeconds = 43200 - totalWorkedToday; // 12 hours in seconds
+
+        res.status(200).json({
+            remainingSeconds: remainingSeconds < 0 ? 0 : remainingSeconds
+        });
+
+    } catch (err) {
+        console.error('Error fetching remaining time:', err);
+        res.status(500).json({ error: 'Failed to fetch remaining time.' });
+    }
+});
 // Endpoint to end a driver sessions
 router.put('/endDriverSession', async (req, res) => {
     const { session_id, end_time } = req.body;
