@@ -597,9 +597,9 @@ router.get('/driver/remainingTime/:userId', async (req, res) => {
 
     try {
         const [rows] = await pool.query(
-            SELECT COALESCE(SUM(total_seconds), 0) AS totalWorkedToday
+            `SELECT COALESCE(SUM(total_seconds), 0) AS totalWorkedToday
              FROM driver_sessions
-             WHERE user_id = ? AND DATE(start_time) = CURDATE(),
+             WHERE user_id = ? AND DATE(start_time) = CURDATE()`,
             [userId]
         );
 
