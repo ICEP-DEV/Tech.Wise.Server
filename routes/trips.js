@@ -792,15 +792,14 @@ router.post('/quote', async (req, res) => {
     console.log("📝 Executing Query:", query);
     console.log("📦 With Values:", queryValues);
   
-    await pool.query(query, queryValues, (err, results) => {
-      if (err) {
+    try {
+        const [results] = await pool.query(query, queryValues);
+        console.log("✅ Quote inserted successfully with ID:", results.insertId);
+        res.status(200).json({ message: "Quote submitted successfully", id: results.insertId });
+      } catch (err) {
         console.error("❌ Insert error:", err);
-        return res.status(500).json({ error: "Database error" });
-      }
-  
-      console.log("✅ Quote inserted successfully with ID:", results.insertId);
-      res.status(200).json({ message: "Quote submitted successfully", id: results.insertId });
-    });
+        res.status(500).json({ error: "Database error" });
+      }      
   });
   
 
