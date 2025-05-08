@@ -742,7 +742,7 @@ router.get('/driver/stats/:user_id', async (req, res) => {
 });
 
 //helcopter quote endpoint
-router.post('/quote', (req, res) => {
+router.post('/quote', async (req, res) => {
     const {
       flightDate,
       numberOfPassengers,
@@ -792,7 +792,7 @@ router.post('/quote', (req, res) => {
     console.log("📝 Executing Query:", query);
     console.log("📦 With Values:", queryValues);
   
-    pool.query(query, queryValues, (err, results) => {
+    await pool.query(query, queryValues, (err, results) => {
       if (err) {
         console.error("❌ Insert error:", err);
         return res.status(500).json({ error: "Database error" });
@@ -805,7 +805,6 @@ router.post('/quote', (req, res) => {
   
 
 
-//endpoint to fetch all trips
 
 
 
