@@ -336,9 +336,11 @@ router.put('/trips/:tripId/status', async (req, res) => {
         // Update trip status
         const [result] = await pool.query(sql, params);
 
-        // Additional step: Set driver state to 'offline' if trip is accepted
+        // Additional step: Set driver state to 'offline' if trip is accepted or online if completed
         if (status === 'accepted' && driverId) {
             await pool.query(`UPDATE driver SET state = 'offline' WHERE users_id = ?`, [driverId]);
+        } else if (status === 'completed' && driverId) {
+            await pool.query(`UPDATE driver SET state = 'online' WHERE users_id = ?`, [driverId]);
         }
 
         if (result.affectedRows > 0) {
