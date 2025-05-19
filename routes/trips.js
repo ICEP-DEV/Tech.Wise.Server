@@ -294,7 +294,9 @@ router.put('/trips/:tripId/status', async (req, res) => {
         }
 
         const trip = tripExists[0]; // Get the trip object
-        const driverId = trip.users_id; // Assuming the trips table has driver_id
+
+        const driverId = trip.driverId; // Assuming the trips table has driver_id
+        console.log('Trip driverId:', driverId);
 
         if (!status) {
             return res.status(400).json({ message: 'Status is required' });
@@ -752,16 +754,16 @@ router.get('/driver/stats/:user_id', async (req, res) => {
 //helcopter quote endpoint
 router.post('/quote', async (req, res) => {
     const {
-      flightDate,
-      numberOfPassengers,
-      passengerWeights,
-      luggageWeight,
-      departurePoint,
-      destination,
-      isReturnFlight,
-      waitingTime
+        flightDate,
+        numberOfPassengers,
+        passengerWeights,
+        luggageWeight,
+        departurePoint,
+        destination,
+        isReturnFlight,
+        waitingTime
     } = req.body;
-  
+
     // ✅ Log incoming request body
     console.log("📥 New Quote Request Received:");
     console.log("flightDate:", flightDate);
@@ -772,44 +774,44 @@ router.post('/quote', async (req, res) => {
     console.log("destination:", destination);
     console.log("isReturnFlight:", isReturnFlight);
     console.log("waitingTime:", waitingTime);
-  
+
     // ✅ Validation
     if (!flightDate || !numberOfPassengers || !departurePoint || !destination) {
-      console.warn("⚠️ Missing required fields");
-      return res.status(400).json({ error: "Required fields are missing" });
+        console.warn("⚠️ Missing required fields");
+        return res.status(400).json({ error: "Required fields are missing" });
     }
-  
+
     const query = `
       INSERT INTO helicopter_quotes
       (flightDate, numberOfPassengers, passengerWeights, luggageWeight, departurePoint, destination, isReturnFlight, waitingTime)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `;
-  
+
     const queryValues = [
-      flightDate,
-      numberOfPassengers,
-      passengerWeights || null,
-      luggageWeight || null,
-      departurePoint,
-      destination,
-      isReturnFlight || null,
-      waitingTime || null
+        flightDate,
+        numberOfPassengers,
+        passengerWeights || null,
+        luggageWeight || null,
+        departurePoint,
+        destination,
+        isReturnFlight || null,
+        waitingTime || null
     ];
-  
+
     // ✅ Log the query and values
     console.log("📝 Executing Query:", query);
     console.log("📦 With Values:", queryValues);
-  
+
     try {
         const [results] = await pool.query(query, queryValues);
         console.log("✅ Quote inserted successfully with ID:", results.insertId);
         res.status(200).json({ message: "Quote submitted successfully", id: results.insertId });
-      } catch (err) {
+    } catch (err) {
         console.error("❌ Insert error:", err);
         res.status(500).json({ error: "Database error" });
-      }      
-  });
-  
+    }
+});
+
 
 
 
