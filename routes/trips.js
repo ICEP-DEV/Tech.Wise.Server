@@ -278,7 +278,6 @@ router.get('/driverTrips', async (req, res) => {
 
 
 // Endpoint to update the trip status
-
 router.put('/trips/:tripId/status', async (req, res) => {
     const { tripId } = req.params;
     const { status, cancellation_reason, cancel_by, distance_traveled } = req.body;
@@ -287,20 +286,22 @@ router.put('/trips/:tripId/status', async (req, res) => {
     console.log('Request Params:', req.params);
 
     try {
-        // Check if the trip exists before updating
+        // Check if the trip exists
         const [tripExists] = await pool.query('SELECT * FROM trips WHERE id = ?', [tripId]);
-        console.log('tripExists:', tripExists);
 
         if (!tripExists.length) {
             return res.status(404).json({ message: 'Trip not found' });
         }
+
+        const trip = tripExists[0]; // Get the trip object
+        const driverId = trip.driver_id; // Assuming the trips table has driver_id
 
         if (!status) {
             return res.status(400).json({ message: 'Status is required' });
         }
 
         let sql;
-        let params = [status, tripId]; // Default params for status update
+        let params = [status, tripId]; // Default
 
         if (status === 'on-going') {
             sql = `UPDATE trips SET statuses = ?, pickupTime = NOW() WHERE id = ?`;
@@ -313,7 +314,7 @@ router.put('/trips/:tripId/status', async (req, res) => {
                     distance_traveled = ? 
                 WHERE id = ?
             `;
-            params = [status, distance_traveled, tripId]; // Correct order of parameters
+            params = [status, distance_traveled, tripId];
 
         } else if (status === 'canceled') {
             sql = `UPDATE trips SET statuses = ?, cancellation_reason = ?, cancel_by = ? WHERE id = ?`;
@@ -330,19 +331,26 @@ router.put('/trips/:tripId/status', async (req, res) => {
             return res.status(400).json({ message: 'Invalid status' });
         }
 
-        // Execute the query
+        // Update trip status
         const [result] = await pool.query(sql, params);
+
+        // Additional step: Set driver state to 'offline' if trip is accepted
+        if (status === 'accepted' && driverId) {
+            await pool.query(`UPDATE driver SET state = 'offline' WHERE id = ?`, [driverId]);
+        }
 
         if (result.affectedRows > 0) {
             res.json({ message: 'Trip status updated successfully' });
         } else {
             res.status(404).json({ message: 'Trip not found or status unchanged' });
         }
+
     } catch (error) {
         console.error('Error executing query:', error);
         res.status(500).json({ message: 'Internal server error' });
     }
 });
+
 
 
 // Endpoint to fetch the latest trip status for a specific user
