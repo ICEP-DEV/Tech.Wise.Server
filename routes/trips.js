@@ -294,7 +294,7 @@ router.put('/trips/:tripId/status', async (req, res) => {
         }
 
         const trip = tripExists[0]; // Get the trip object
-        const driverId = trip.driver_id; // Assuming the trips table has driver_id
+        const driverId = trip.users_id; // Assuming the trips table has driver_id
 
         if (!status) {
             return res.status(400).json({ message: 'Status is required' });
