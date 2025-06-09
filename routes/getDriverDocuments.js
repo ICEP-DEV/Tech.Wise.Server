@@ -66,6 +66,8 @@ router.post("/driver_details", async (req, res) => {
     ) {
       return res.status(400).send('All required fields must be provided.');
     }
+    // Get current date and time as string (YYYY-MM-DD HH:mm:ss)
+    const documentUploadTime = new Date().toISOString().slice(0, 19).replace('T', ' ');
 
     // Check if the driver details for the given user_id already exist
     const checkQuery = `SELECT * FROM driver WHERE users_id = ?`;
@@ -84,7 +86,8 @@ router.post("/driver_details", async (req, res) => {
           police_clearance = ?, 
           pdp = ?, 
           car_inspection = ?, 
-          driver_license = ? 
+          driver_license = ?, 
+          document_upload_time = ?
         WHERE users_id = ?
       `;
 
@@ -99,6 +102,7 @@ router.post("/driver_details", async (req, res) => {
         pdpLicense,
         car_inspection,
         driver_license,
+        documentUploadTime,
         user_id
       ];
 
@@ -110,8 +114,8 @@ router.post("/driver_details", async (req, res) => {
       // If the driver data does not exist, insert a new record
       const insertQuery = `
         INSERT INTO driver 
-        (users_id, status, state, URL_payment, online_time, last_online_timestamp, id_copy, police_clearance, pdp, car_inspection, driver_license)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        (users_id, status, state, URL_payment, online_time, last_online_timestamp, id_copy, police_clearance, pdp, car_inspection, driver_license, document_upload_time)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `;
 
       const insertData = [
@@ -125,7 +129,8 @@ router.post("/driver_details", async (req, res) => {
         police_clearance,
         pdpLicense,
         car_inspection,
-        driver_license
+        driver_license,
+        documentUploadTime
       ];
 
       console.log('Inserting driver:', insertData);
