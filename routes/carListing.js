@@ -2,43 +2,6 @@ const express = require("express");
 const router = express.Router();
 const pool = require("../config/config");
 require("dotenv").config();
-const multer = require("multer");
-const { bucket } = require("../config/googleCloudConfig"); // Import your custom Google Cloud config
-const path = require("path");
-
-// Multer setup for file handling
-const multerStorage = multer.memoryStorage(); // Store files in memory
-const upload = multer({ storage: multerStorage });
-
-
-// Helper function to upload file to Google Cloud Storage
-const uploadFile = async (file) => {
-  try {
-    const blob = bucket.file(Date.now() + "-" + file.originalname); // Unique file name
-    const blobStream = blob.createWriteStream({
-      resumable: false,
-      gzip: true,
-      contentType: file.mimetype,
-    });
-
-    return new Promise((resolve, reject) => {
-      blobStream.on("finish", () => {
-        const fileUrl = `https://storage.googleapis.com/${bucket.name}/${blob.name}`;
-        resolve(fileUrl);
-      });
-
-      blobStream.on("error", (err) => {
-        console.error("Error uploading file:", err);
-        reject(err);
-      });
-
-      blobStream.end(file.buffer);
-    });
-  } catch (error) {
-    console.error("Error during file upload:", error);
-    throw new Error("Error during file upload");
-  }
-};
 
 
 router.post("/car_listing", async (req, res) => {
@@ -101,39 +64,28 @@ router.post("/car_listing", async (req, res) => {
 });
 
 
+// 🚗 Get Car Listings by User ID 
+router.get('/car_listing/user/:user_id', async (req, res) => {
+    const { user_id } = req.params;
 
-module.exports = router;
-
-
-
-
-
-// 🚗 **Get Car Listings by User ID**
-router.get('/car_listing/user', (req, res) => {
-    const userId = req.query.userId;
-
-    if (!userId) {
-        return res.status(400).json({ error: "User ID is required" });
+    if (!user_id) {
+        return res.status(400).json({ error: "User ID is required." });
     }
 
-    const sql = "SELECT * FROM car_listing WHERE userId = ?";
+    try {
+        const [rows] = await pool.query(
+            "SELECT * FROM car_listing WHERE userId = ?",
+            [user_id]
+        );
 
-    pool.getConnection((err, connection) => {
-        if (err) {
-            console.error("Database connection failed:", err);
-            return res.status(500).json({ error: "Database connection error" });
-        }
-
-        connection.query(sql, [userId], (error, results) => {
-            connection.release(); // Release connection back to pool
-
-            if (error) {
-                console.error("Error fetching car details:", error);
-                return res.status(500).json({ error: "Error fetching car details" });
-            }
-            return res.status(200).json({ carListings: results });
+        res.status(200).json({
+            carListings: rows
         });
-    });
+    } catch (err) {
+        console.error("Error fetching car details:", err);
+        res.status(500).json({ error: "Failed to fetch car details." });
+    }
 });
+
 
 module.exports = router;
