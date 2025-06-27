@@ -160,7 +160,23 @@ router.get('/tripHistory/:userId', async (req, res) => {
     }
 });
 
+// Endpoint to fetch a single trip by tripId
+router.get('/trip/:tripId', async (req, res) => {
+  const tripId = req.params.tripId;
 
+  try {
+    const [rows] = await pool.query('SELECT * FROM trips WHERE id = ?', [tripId]);
+
+    if (rows.length === 0) {
+      return res.status(404).json({ message: 'Trip not found' });
+    }
+
+    res.json(rows[0]); // return the first (and only) trip
+  } catch (error) {
+    console.error('Error fetching trip by ID:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
 
 // Endpoint to update real-time location in Firestore
 router.post('/trips/update-location', async (req, res) => {
