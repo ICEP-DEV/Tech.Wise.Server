@@ -111,29 +111,33 @@ router.put('/helicopter_quotes/:quoteId', async (req, res) => {
     }
 });
 
-// DELETE a quote (only by the owner)
-router.delete('/helicopter_quotes/:quoteId', async (req, res) => {
+// UPDATE the status of a quote (e.g., to "Cancelled") by owner
+router.put('/helicopter_quotes/:quoteId', async (req, res) => {
     const { quoteId } = req.params;
-    const { user_id } = req.body;
+    const { user_id, status } = req.body;
 
-    if (!user_id) {
-        return res.status(400).json({ message: 'Missing user_id.' });
+    if (!user_id || !status) {
+        return res.status(400).json({ message: 'Missing user_id or status.' });
     }
 
     try {
         const connection = await pool.getConnection();
-        const [result] = await connection.execute('DELETE FROM helicopter_quotes WHERE id = ? AND user_id = ?', [quoteId, user_id]);
+        const [result] = await connection.execute(
+            'UPDATE helicopter_quotes SET status = ? WHERE id = ? AND user_id = ?',
+            [status, quoteId, user_id]
+        );
         connection.release();
 
         if (result.affectedRows === 0) {
             return res.status(404).json({ message: 'Quote not found or not authorized.' });
         }
 
-        res.status(200).json({ message: 'Quote deleted successfully.' });
+        res.status(200).json({ message: `Quote status updated to "${status}".` });
     } catch (error) {
         console.error('Database error:', error);
         res.status(500).json({ message: 'Internal server error.' });
     }
 });
+
 
 module.exports = router;
