@@ -58,4 +58,23 @@ router.get('/count_trips', async (req, res) => {
 });
 
 
+// Endpoint to count subscriptions grouped by user_id
+router.get('/count_subscriptions', async (req, res) => {
+  const query = `
+    SELECT 
+      COUNT(*) AS totalSubscriptions,
+      COUNT(DISTINCT user_id) AS uniqueSubscribers
+    FROM subscriptions
+  `;
+
+  try {
+    const [rows] = await pool.query(query);
+    res.json(rows[0]); // returns: { totalSubscriptions: X, uniqueSubscribers: Y }
+  } catch (error) {
+    console.error('❌ Error fetching subscription count:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+
 module.exports = router;
