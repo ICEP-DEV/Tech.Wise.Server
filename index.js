@@ -10,6 +10,7 @@ const customerDetails = require('./routes/customerDetails');
 const customerPayments = require('./routes/customerPayments');
 const subaccounts = require('./routes/subaccounts');
 const helicopter = require('./routes/helicopter')
+const allData = require('./routes/allData')
 
 
 const cors = require('cors');
@@ -47,6 +48,7 @@ app.use("/api", customerPayments);
 app.use("/api", customerDetails);
 app.use("/api", subaccounts);
 app.use("/api", helicopter);
+app.use("/api", allData);
 
 // Global error handler
 app.use((err, req, res, next) => {
