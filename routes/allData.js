@@ -76,5 +76,25 @@ router.get('/count_subscriptions', async (req, res) => {
   }
 });
 
+// Get monthly subscription trends
+router.get('/subscriptions/trends', async (req, res) => {
+  const query = `
+    SELECT 
+      DATE_FORMAT(created_at, '%Y-%m') AS month,
+      plan_name,
+      COUNT(*) AS count
+    FROM subscriptions
+    GROUP BY month, plan_name
+    ORDER BY month ASC;
+  `;
+
+  try {
+    const [rows] = await pool.query(query);
+    res.json(rows); // return array of { month, plan_name, count }
+  } catch (error) {
+    console.error("Error fetching subscription trends:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
 
 module.exports = router;
