@@ -1,3 +1,7 @@
+const express = require('express');
+const router = express.Router();
+const pool = require('../config/config'); // Use pool for database connection
+
 // routes/feedback.js
 router.get('/feedback/recent-with-user', async (req, res) => {
   try {
