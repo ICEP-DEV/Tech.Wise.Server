@@ -42,6 +42,24 @@ router.post('/payment', async (req, res) => {
   }
 });
 
+// calculate total revenue from successful payments
+router.get('/payment/summary', async (req, res) => {
+  const query = `
+    SELECT 
+      COUNT(*) AS totalPayments,
+      SUM(CASE WHEN payment_status = 'successful' THEN amount ELSE 0 END) AS totalRevenue,
+      COUNT(DISTINCT user_id) AS uniquePayers
+    FROM payment
+  `;
+
+  try {
+    const [rows] = await pool.query(query);
+    res.json(rows[0]);
+  } catch (error) {
+    console.error('Error fetching payment summary:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
 
 // Endpoint to fetch payment details for a specific trip
 router.get('/payment/:tripId', async (req, res) => {
@@ -86,24 +104,7 @@ router.get('/payment', async (req, res) => {
   }
 });
 
-// calculate total revenue from successful payments
-router.get('/payment/summary', async (req, res) => {
-  const query = `
-    SELECT 
-      COUNT(*) AS totalPayments,
-      SUM(CASE WHEN payment_status = 'successful' THEN amount ELSE 0 END) AS totalRevenue,
-      COUNT(DISTINCT user_id) AS uniquePayers
-    FROM payment
-  `;
 
-  try {
-    const [rows] = await pool.query(query);
-    res.json(rows[0]);
-  } catch (error) {
-    console.error('Error fetching payment summary:', error);
-    res.status(500).json({ message: 'Internal server error' });
-  }
-});
 
 
 // Create Paystack customer
