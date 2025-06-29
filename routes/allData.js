@@ -1,3 +1,19 @@
+// Endpoint to count approved drivers
+router.get('/approved_drivers', async (req, res) => {
+  const query = `SELECT COUNT(*) AS count FROM driver WHERE status = 'approved'`;
+
+  try {
+    const startTime = Date.now();
+    const [rows] = await pool.query(query);
+    console.log(`✅ Count of approved drivers fetched in ${Date.now() - startTime} ms`);
+
+    res.json({ count: rows[0].count });
+  } catch (error) {
+    console.error('❌ Error counting approved drivers:', error);
+    res.status(500).json({ message: 'Internal server error while counting approved drivers' });
+  }
+});
+
 // Endpoint to count customers
 router.get('/count_customers', async (req, res) => {
   const query = `SELECT COUNT(*) AS count FROM users WHERE role = 'customer'`;
