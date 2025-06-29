@@ -67,6 +67,26 @@ router.get('/payment/:tripId', async (req, res) => {
   }
 });
 
+// Endpoint to fetch all payment records
+router.get('/payment', async (req, res) => {
+  const query = `SELECT * FROM payment`;
+
+  try {
+    const [rows] = await pool.query(query);
+
+    if (rows.length === 0) {
+      return res.status(404).json({ message: 'No payments found' });
+    }
+
+    console.log("Fetched all payments");
+    res.json(rows); // return array of payments
+  } catch (error) {
+    console.error('Error fetching all payments:', error);
+    res.status(500).send('Error fetching payments');
+  }
+});
+
+
 // Create Paystack customer
 router.post('/create-customer', (req, res) => {
   const { email, first_name, last_name, phone } = req.body;
