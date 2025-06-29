@@ -46,7 +46,7 @@ router.get('/count_drivers', async (req, res) => {
 
 // Endpoint to count all trips
 router.get('/count_trips', async (req, res) => {
-  const query = `SELECT COUNT(*) AS count FROM trip`;
+  const query = `SELECT COUNT(*) AS count FROM trips`;
 
   try {
     const [rows] = await pool.query(query);
