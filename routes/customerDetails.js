@@ -4,34 +4,43 @@ const pool = require('../config/config'); // Use pool for database connection
 
 
 
-// Endpoint to fetch customer data
-router.get('/customer/:id', async (req, res) => {
-    const { id } = req.params;
-    console.log(`🚀 Fetching details for customer ID: ${id}`);  // Confirm this is printed
+// Endpoint to fetch customer data (all or by ID)
+router.get('/customer', async (req, res) => {
+    const { id } = req.query;  // Use query param for optionality
 
-    if (!id) {
-        return res.status(400).json({ message: 'Customer ID is required' });
+    let query = "SELECT * FROM users";
+    const queryParams = [];
+
+    if (id) {
+        query += " WHERE id = ?";
+        queryParams.push(id);
+        console.log(`🚀 Fetching details for customer ID: ${id}`);
+    } else {
+        console.log("🚀 Fetching all customer details");
     }
-
-    const query = "SELECT * FROM users WHERE id = ?";
 
     try {
         const startTime = Date.now();
-        const [rows] = await pool.query(query, [id]);
+        const [rows] = await pool.query(query, queryParams);
         console.log(`Query executed in ${Date.now() - startTime} ms`);
 
-        if (rows.length > 0) {
-            console.log("✅ User found:", rows[0]);
+        if (rows.length === 0) {
+            return res.status(404).json({ message: "No customer(s) found" });
+        }
+
+        // If fetching by ID, return single object
+        if (id) {
+            console.log("✅ Customer found:", rows[0]);
             res.status(200).json(rows[0]);
         } else {
-            console.log("⚠️ No results found");
-            return res.status(404).json({ message: "User not found" });
+            res.status(200).json(rows);  // return full list
         }
     } catch (error) {
         console.error("❌ Error executing query:", error);
         res.status(500).json({ message: 'Internal server error' });
     }
 });
+
 // Endpoint to update customer data
 router.post('/update-profile-picture', async (req, res) => {
     const { profile_picture, user_id } = req.body;
