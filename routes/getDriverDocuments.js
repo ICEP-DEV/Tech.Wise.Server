@@ -148,35 +148,38 @@ router.post("/driver_details", async (req, res) => {
 
 
 
-// Endpoint to fetch driver details by user ID
+// Endpoint to fetch driver details (all or by userId)
 router.get('/more_details/user', async (req, res) => {
-  const { userId } = req.query;  // Get userId from query params
+  const { userId } = req.query;
 
-  console.log('Fetching driver details for userId:', userId);
+  let sql = "SELECT * FROM driver";
+  const queryParams = [];
 
-  if (!userId) {
-    return res.status(400).json({ message: 'User ID is required' });
+  // If userId is provided, filter by it
+  if (userId) {
+    sql += " WHERE users_id = ?";
+    queryParams.push(userId);
+    console.log('Fetching driver details for userId:', userId);
+  } else {
+    console.log('Fetching all driver details');
   }
-
-  const sql = "SELECT * FROM driver WHERE users_id = ?";
 
   try {
     const startTime = Date.now();
-    const [rows] = await pool.query(sql, [userId]);
+    const [rows] = await pool.query(sql, queryParams);
     console.log(`Query executed in ${Date.now() - startTime} ms`);
 
-    // If no records are found, return a 404 status
     if (rows.length === 0) {
-      return res.status(404).json({ message: 'Driver details not found for this user' });
+      return res.status(404).json({ message: 'No driver details found' });
     }
 
-    // If driver details are found, return them in the response
     res.json({ driver: rows });
   } catch (error) {
     console.error('Error executing query:', error);
     res.status(500).json({ message: 'Internal server error while fetching driver details' });
   }
 });
+
 
 
 // Endpoint to fetch driver documents by driver ID
