@@ -44,4 +44,18 @@ router.get('/count_drivers', async (req, res) => {
   }
 });
 
+// Endpoint to count all trips
+router.get('/count_trips', async (req, res) => {
+  const query = `SELECT COUNT(*) AS count FROM trip`;
+
+  try {
+    const [rows] = await pool.query(query);
+    res.json({ count: rows[0].count });
+  } catch (error) {
+    console.error('❌ Error fetching trip count:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+
 module.exports = router;
