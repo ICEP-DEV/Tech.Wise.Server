@@ -116,4 +116,30 @@ router.get('/drivers', async (req, res) => {
   }
 });
 
+// GET /api/drivers/:userId
+router.get('/drivers/:userId', async (req, res) => {
+  const { userId } = req.params;
+
+  const query = `
+    SELECT 
+      d.id_copy, d.users_id, d.police_clearance, d.pdp, d.status, d.state, d.car_inspection, d.driver_license, d.document_upload_time,
+      u.name, u.email, u.role, u.phoneNumber, u.address, u.lastName, u.current_address, u.gender, u.profile_picture, u.user_uid, u.customer_code
+    FROM driver d
+    JOIN users u ON d.users_id = u.id
+    WHERE d.users_id = ?
+  `;
+
+  try {
+    const [rows] = await pool.query(query, [userId]);
+    if (rows.length === 0) {
+      return res.status(404).json({ message: "Driver not found" });
+    }
+    res.json(rows[0]);
+  } catch (error) {
+    console.error("Error fetching driver by userId:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+
 module.exports = router;
