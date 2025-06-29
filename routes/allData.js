@@ -82,19 +82,21 @@ router.get('/subscriptions/trends', async (req, res) => {
     SELECT 
       DATE_FORMAT(created_at, '%Y-%m') AS month,
       plan_name,
+      statuses,
       COUNT(*) AS count
     FROM subscriptions
-    GROUP BY month, plan_name
+    GROUP BY month, plan_name, statuses
     ORDER BY month ASC;
   `;
 
   try {
     const [rows] = await pool.query(query);
-    res.json(rows); // return array of { month, plan_name, count }
+    res.json(rows);
   } catch (error) {
     console.error("Error fetching subscription trends:", error);
     res.status(500).json({ message: "Internal server error" });
   }
 });
+
 
 module.exports = router;
