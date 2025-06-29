@@ -1,3 +1,7 @@
+const express = require('express');
+const router = express.Router();
+const pool = require('../config/config'); // Use pool for database connection
+
 // Endpoint to count approved drivers
 router.get('/approved_drivers', async (req, res) => {
   const query = `SELECT COUNT(*) AS count FROM driver WHERE status = 'approved'`;
