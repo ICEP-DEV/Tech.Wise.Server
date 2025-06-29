@@ -98,5 +98,22 @@ router.get('/subscriptions/trends', async (req, res) => {
   }
 });
 
+// GET /api/drivers
+router.get('/drivers', async (req, res) => {
+  const query = `
+    SELECT 
+      d.id_copy, d.users_id, d.police_clearance, d.pdp, d.status, d.state, d.car_inspection, d.driver_license, d.document_upload_time,
+      u.name, u.email, u.role, u.phoneNumber, u.address, u.lastName, u.current_address, u.gender, u.profile_picture, u.user_uid, u.customer_code
+    FROM driver d
+    JOIN users u ON d.users_id = u.id
+  `;
+  try {
+    const [rows] = await pool.query(query);
+    res.json(rows);
+  } catch (error) {
+    console.error("Error fetching drivers:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
 
 module.exports = router;
