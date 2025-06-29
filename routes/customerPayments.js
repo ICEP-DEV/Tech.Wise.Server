@@ -98,7 +98,7 @@ router.get('/payment/summary', async (req, res) => {
 
   try {
     const [rows] = await pool.query(query);
-    res.json(rows[0]); // return summary object
+    res.json(rows[0]);
   } catch (error) {
     console.error('Error fetching payment summary:', error);
     res.status(500).json({ message: 'Internal server error' });
