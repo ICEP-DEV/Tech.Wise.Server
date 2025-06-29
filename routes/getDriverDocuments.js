@@ -146,7 +146,7 @@ router.post("/driver_details", async (req, res) => {
 
 
 // Endpoint to count approved drivers
-router.get('/approved_drivers/user', async (req, res) => {
+router.get('/approved_drivers', async (req, res) => {
   const query = `SELECT COUNT(*) AS count FROM driver WHERE status = 'approved'`;
 
   try {
