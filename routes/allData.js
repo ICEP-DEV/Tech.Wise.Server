@@ -43,3 +43,5 @@ router.get('/count_drivers', async (req, res) => {
     res.status(500).json({ message: 'Internal server error while counting drivers' });
   }
 });
+
+module.exports = router;
