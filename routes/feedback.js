@@ -20,3 +20,4 @@ router.get('/feedback/recent-with-user', async (req, res) => {
     res.status(500).json({ message: 'Internal server error' });
   }
 });
+module.exports = router;
