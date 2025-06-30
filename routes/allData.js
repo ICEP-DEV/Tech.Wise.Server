@@ -141,5 +141,63 @@ router.get('/drivers/:userId', async (req, res) => {
   }
 });
 
+// PUT /api/drivers/:userId
+
+router.put('/drivers/:userId', async (req, res) => {
+  const { userId } = req.params;
+  const {
+    name,
+    lastName,
+    email,
+    phoneNumber,
+    address,
+    current_address,
+    gender,
+    status,
+    state
+    // Do NOT include profile_picture or document fields here!
+  } = req.body;
+
+  // Update users table
+  const userUpdateQuery = `
+    UPDATE users
+    SET name = ?, lastName = ?, email = ?, phoneNumber = ?, address = ?, current_address = ?, gender = ?
+    WHERE id = ?
+  `;
+
+  // Update driver table
+  const driverUpdateQuery = `
+    UPDATE driver
+    SET status = ?, state = ?
+    WHERE users_id = ?
+  `;
+
+  try {
+    // Update users table
+    await pool.query(userUpdateQuery, [
+      name,
+      lastName,
+      email,
+      phoneNumber,
+      address,
+      current_address,
+      gender,
+      userId
+    ]);
+
+    // Update driver table
+    await pool.query(driverUpdateQuery, [
+      status,
+      state,
+      userId
+    ]);
+
+    res.json({ message: "Driver updated successfully" });
+  } catch (error) {
+    console.error("Error updating driver by userId:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
+
 
 module.exports = router;
