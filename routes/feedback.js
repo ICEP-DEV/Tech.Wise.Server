@@ -3,21 +3,28 @@ const router = express.Router();
 const pool = require('../config/config'); // Use pool for database connection
 
 // routes/feedback.js
-router.get('/feedback/recent-with-user', async (req, res) => {
+// Submit customer rating and feedback
+router.post('/ride/rating', async (req, res) => {
+  const { tripId, userId, rating, feedback = '', role } = req.body;
+
   try {
-    const [rows] = await pool.query(`
-      SELECT 
-        f.id, f.userId, f.content, f.rating, f.role, f.createdAt,
-        u.name, u.email
-      FROM feedback f
-      LEFT JOIN users u ON f.userId = u.id
-      ORDER BY f.createdAt DESC
-      LIMIT 10
-    `);
-    res.json(rows); // array of recent feedback with user details
+    // 1. Update customer_rating in the trips table
+    await pool.query(
+      `UPDATE trips SET customer_rating = ? WHERE id = ?`,
+      [rating, tripId]
+    );
+
+    // 2. Insert feedback record (content can be empty or null)
+    await pool.query(
+      `INSERT INTO feedback (userId, content, rating, role, createdAt)
+       VALUES (?, ?, ?, ?, NOW())`,
+      [userId, feedback || null, rating, role]
+    );
+
+    res.status(200).json({ message: 'Rating and feedback submitted successfully' });
   } catch (error) {
-    console.error("❌ Error fetching recent feedback:", error);
-    res.status(500).json({ message: 'Internal server error' });
+    console.error('Error submitting rating and feedback:', error);
+    res.status(500).json({ error: 'Failed to submit rating and feedback' });
   }
 });
 module.exports = router;
