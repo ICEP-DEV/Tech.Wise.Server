@@ -7,9 +7,9 @@ router.post('/ride/rating', async (req, res) => {
   const { tripId, userId, rating, feedback = '', role } = req.body;
 
   try {
-    // 1. Update customer_rating in the trips table
+    // 1. Update driver_ratings in the trips table
     await pool.query(
-      `UPDATE trips SET customer_rating = ? WHERE id = ?`,
+      `UPDATE trips SET driver_ratings = ? WHERE id = ?`,
       [rating, tripId]
     );
 
