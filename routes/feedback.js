@@ -2,7 +2,6 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../config/config'); // Use pool for database connection
 
-// routes/feedback.js
 // Submit customer rating and feedback
 router.post('/ride/rating', async (req, res) => {
   const { tripId, userId, rating, feedback = '', role } = req.body;
@@ -14,11 +13,11 @@ router.post('/ride/rating', async (req, res) => {
       [rating, tripId]
     );
 
-    // 2. Insert feedback record (content can be empty or null)
+    // 2. Insert feedback (always provide empty string if no feedback)
     await pool.query(
       `INSERT INTO feedback (userId, content, rating, role, createdAt)
        VALUES (?, ?, ?, ?, NOW())`,
-      [userId, feedback || null, rating, role]
+      [userId, feedback.trim(), rating, role]
     );
 
     res.status(200).json({ message: 'Rating and feedback submitted successfully' });
@@ -27,4 +26,5 @@ router.post('/ride/rating', async (req, res) => {
     res.status(500).json({ error: 'Failed to submit rating and feedback' });
   }
 });
+
 module.exports = router;
