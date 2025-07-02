@@ -2,18 +2,27 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../config/config'); // Use pool for database connection
 
-// Submit customer rating and feedback
+// Submit rating and feedback
 router.post('/ride/rating', async (req, res) => {
   const { tripId, userId, rating, feedback = '', role } = req.body;
 
   try {
-    // 1. Update driver_ratings in the trips table
-    await pool.query(
-      `UPDATE trips SET driver_ratings = ? WHERE id = ?`,
-      [rating, tripId]
-    );
+    // 1. Conditionally update the correct rating column in trips table
+    if (role === 'customer') {
+      await pool.query(
+        `UPDATE trips SET driver_ratings = ? WHERE id = ?`,
+        [rating, tripId]
+      );
+    } else if (role === 'driver') {
+      await pool.query(
+        `UPDATE trips SET customer_rating = ? WHERE id = ?`,
+        [rating, tripId]
+      );
+    } else {
+      return res.status(400).json({ error: 'Invalid role specified' });
+    }
 
-    // 2. Insert feedback (always provide empty string if no feedback)
+    // 2. Insert feedback into the feedback table
     await pool.query(
       `INSERT INTO feedback (userId, content, rating, role, createdAt)
        VALUES (?, ?, ?, ?, NOW())`,
