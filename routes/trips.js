@@ -756,7 +756,7 @@ router.get('/driver/stats/:user_id', async (req, res) => {
                 t.driver_ratings,
                 t.requestDate,
                 p.amount,
-                p.payment_status
+                t.payment_status
             FROM trips t
             LEFT JOIN payment p ON t.id = p.tripId
             WHERE t.driverId = ?
