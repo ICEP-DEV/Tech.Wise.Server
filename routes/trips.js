@@ -328,7 +328,7 @@ router.put('/trips/:tripId/status', async (req, res) => {
             sql = `
                 UPDATE trips
                 SET statuses = ?, dropOffTime = NOW(), 
-                    duration_minutes = TIMESTAMPDIFF(MINUTE, pickupTime, NOW()), 
+                    payment_status = 'paid', 
                     distance_traveled = ? 
                 WHERE id = ?
             `;
