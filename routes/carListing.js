@@ -104,7 +104,7 @@ router.put("/car_listing/:car_id", async (req, res) => {
       updateQuery = `
         UPDATE car_listing
         SET userId = ?, car_make = ?, car_model = ?, car_year = ?, number_of_seats = ?, car_colour = ?, license_plate = ?, car_image = ?, \`class\` = ?
-        WHERE car_id = ?
+        WHERE id = ?
       `;
       updateData = [
         userId, car_make, car_model, car_year, number_of_seats,
@@ -114,7 +114,7 @@ router.put("/car_listing/:car_id", async (req, res) => {
       updateQuery = `
         UPDATE car_listing
         SET userId = ?, car_make = ?, car_model = ?, car_year = ?, number_of_seats = ?, car_colour = ?, license_plate = ?, car_image = ?
-        WHERE car_id = ?
+        WHERE id = ?
       `;
       updateData = [
         userId, car_make, car_model, car_year, number_of_seats,
@@ -170,7 +170,7 @@ router.delete('/car_listing/:car_id', async (req, res) => {
 
   try {
     const [result] = await pool.query(
-      "DELETE FROM car_listing WHERE car_id = ?",
+      "DELETE FROM car_listing WHERE id = ?",
       [car_id]
     );
 
