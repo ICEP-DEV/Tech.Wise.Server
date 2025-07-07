@@ -3,10 +3,10 @@ const router = express.Router();
 const pool = require("../config/config");
 require("dotenv").config();
 
-// 🚗 Save or Update Car Listing
-router.post("/car_listing", async (req, res) => {
+// Update Car Listing by Car ID
+router.put("/car_listing/:car_id", async (req, res) => {
   try {
-    console.log("🚚 Request received to save car listing...");
+    const { car_id } = req.params;
     const {
       userId,
       car_make,
@@ -19,7 +19,9 @@ router.post("/car_listing", async (req, res) => {
       class: carClass, // optional
     } = req.body;
 
-    console.log("🚚 Request body:", req.body);
+    if (!car_id) {
+      return res.status(400).json({ error: "Car ID is required." });
+    }
 
     const missingFields = [];
     if (!userId) missingFields.push("userId");
@@ -30,52 +32,51 @@ router.post("/car_listing", async (req, res) => {
     if (!car_colour) missingFields.push("car_colour");
     if (!license_plate) missingFields.push("license_plate");
     if (!car_image) missingFields.push("car_image");
-    // Removed class validation
 
     if (missingFields.length > 0) {
-      console.log("❌ Missing fields:", missingFields);
       return res.status(400).json({
         error: "Missing required fields",
-        missing: missingFields
+        missing: missingFields,
       });
     }
 
-    const checkQuery = `SELECT * FROM car_listing WHERE userId = ?`;
-    const [existingCar] = await pool.query(checkQuery, [userId]);
-
-    if (existingCar.length > 0) {
-      let updateQuery, updateData;
-      if (carClass !== undefined) {
-        updateQuery = `UPDATE car_listing SET car_make = ?, car_model = ?, car_year = ?, number_of_seats = ?, car_colour = ?, license_plate = ?, car_image = ?, \`class\` = ? WHERE userId = ?`;
-        updateData = [car_make, car_model, car_year, number_of_seats, car_colour, license_plate, car_image, carClass, userId];
-      } else {
-        updateQuery = `UPDATE car_listing SET car_make = ?, car_model = ?, car_year = ?, number_of_seats = ?, car_colour = ?, license_plate = ?, car_image = ? WHERE userId = ?`;
-        updateData = [car_make, car_model, car_year, number_of_seats, car_colour, license_plate, car_image, userId];
-      }
-
-      console.log("🔄 Updating car listing:", updateData);
-      await pool.query(updateQuery, updateData);
-      return res.json({ message: "Car details updated successfully" });
+    let updateQuery, updateData;
+    if (carClass !== undefined) {
+      updateQuery = `
+        UPDATE car_listing
+        SET userId = ?, car_make = ?, car_model = ?, car_year = ?, number_of_seats = ?, car_colour = ?, license_plate = ?, car_image = ?, \`class\` = ?
+        WHERE car_id = ?
+      `;
+      updateData = [
+        userId, car_make, car_model, car_year, number_of_seats,
+        car_colour, license_plate, car_image, carClass, car_id,
+      ];
     } else {
-      let insertQuery, insertData;
-      if (carClass !== undefined) {
-        insertQuery = `INSERT INTO car_listing (userId, car_make, car_model, car_year, number_of_seats, car_colour, license_plate, car_image, \`class\`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
-        insertData = [userId, car_make, car_model, car_year, number_of_seats, car_colour, license_plate, car_image, carClass];
-      } else {
-        insertQuery = `INSERT INTO car_listing (userId, car_make, car_model, car_year, number_of_seats, car_colour, license_plate, car_image) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
-        insertData = [userId, car_make, car_model, car_year, number_of_seats, car_colour, license_plate, car_image];
-      }
+      updateQuery = `
+        UPDATE car_listing
+        SET userId = ?, car_make = ?, car_model = ?, car_year = ?, number_of_seats = ?, car_colour = ?, license_plate = ?, car_image = ?
+        WHERE car_id = ?
+      `;
+      updateData = [
+        userId, car_make, car_model, car_year, number_of_seats,
+        car_colour, license_plate, car_image, car_id,
+      ];
+    }
 
-      console.log("➕ Inserting new car listing:", insertData);
-      await pool.query(insertQuery, insertData);
-      return res.json({ message: "Car details saved successfully" });
+    const [result] = await pool.query(updateQuery, updateData);
+
+    if (result.affectedRows > 0) {
+      res.status(200).json({ message: "Car listing updated successfully." });
+    } else {
+      res.status(404).json({ error: `Car listing not found for ID ${car_id}` });
     }
 
   } catch (error) {
-    console.error("❌ Server error:", error);
-    return res.status(500).json({ message: "Server error" });
+    console.error("❌ Update error:", error);
+    res.status(500).json({ error: "Failed to update car listing." });
   }
 });
+
 
 
 
