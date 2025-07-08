@@ -24,7 +24,7 @@ const PORT = process.env.PORT || 3000;  // Allow port configuration
 app.use(cors());
 app.use('/public', express.static(path.join(__dirname, 'public')));
 app.use(bodyParser.json()); // Parse incoming JSON requests
-
+app.use(express.json());
 // Health check endpoint
 app.get('/api/health', async (req, res) => {
   try {
