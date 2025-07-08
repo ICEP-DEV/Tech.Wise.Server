@@ -112,34 +112,37 @@ router.put('/helicopter_quotes/:quoteId', async (req, res) => {
 });
 
 // UPDATE the status of a quote (e.g., to "Cancelled") by owner
-router.put('/helicopter_quotes/:quoteId', async (req, res) => {
-    const { quoteId } = req.params;
-    const { user_id, status } = req.body;
+router.put('/helicopter_quotes', async (req, res) => {
+  const { data } = req.body;
 
-    console.log(`Updating quote ${quoteId} for user ${user_id} with status ${status}`);
-    // if (!user_id || !status) {
+  if (!data) {
+    return res.status(400).json({ message: "Missing data object." });
+  }
 
-    //     return res.status(400).json({ message: 'Missing user_id or status.', quoteId, user_id, status });
-    // }
+  const { id, status, user_id } = data;
 
-    try {
-        const connection = await pool.getConnection();
-        const [result] = await connection.execute(
-            'UPDATE helicopter_quotes SET status = ? WHERE id = ? AND user_id = ?',
-            [status, quoteId, user_id]
-        );
-        connection.release();
+  if (!id || !status || !user_id) {
+    return res.status(400).json({ message: "Missing required fields." });
+  }
 
-        if (result.affectedRows === 0) {
-            return res.status(404).json({ message: 'Quote not found or not authorized.' });
-        }
+  try {
+    // Your update logic here
+    const [result] = await pool.query(
+      'UPDATE helicopter_quotes SET status = ?, user_id = ? WHERE id = ?',
+      [status, user_id, id]
+    );
 
-        res.status(200).json({ message: `Quote status updated to "${status}".` });
-    } catch (error) {
-        console.error('Database error:', error);
-        res.status(500).json({ message: 'Internal server error.' });
+    if (result.affectedRows > 0) {
+      return res.status(200).json({ message: "Booking cancelled successfully." });
+    } else {
+      return res.status(404).json({ message: "Booking not found." });
     }
+  } catch (error) {
+    console.error("Error updating booking:", error);
+    return res.status(500).json({ message: "Failed to cancel booking." });
+  }
 });
+
 
 
 module.exports = router;
