@@ -117,10 +117,10 @@ router.put('/helicopter_quotes/:quoteId', async (req, res) => {
     const { user_id, status } = req.body;
 
     console.log(`Updating quote ${quoteId} for user ${user_id} with status ${status}`);
-    if (!user_id || !status) {
+    // if (!user_id || !status) {
 
-        return res.status(400).json({ message: 'Missing user_id or status.', quoteId, user_id, status });
-    }
+    //     return res.status(400).json({ message: 'Missing user_id or status.', quoteId, user_id, status });
+    // }
 
     try {
         const connection = await pool.getConnection();
