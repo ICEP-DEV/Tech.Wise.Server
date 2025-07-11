@@ -753,7 +753,7 @@ router.get('/driver/stats/:user_id', async (req, res) => {
             SELECT 
                 t.id AS tripId,
                 t.statuses,
-                t.customer_rating,
+                t.driver_rating,
                 t.requestDate,
                 p.amount,
                 t.payment_status
