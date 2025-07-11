@@ -246,7 +246,7 @@ router.get('/api/car-listings', async (req, res) => {
             JOIN car_listing cl ON v.id = cl.class
             JOIN users u_cl ON cl.userId = u_cl.id
             JOIN driver d ON cl.userId = d.users_id
-            LEFT JOIN trip t ON d.id = t.driverId  
+            LEFT JOIN trips t ON d.id = t.driverId  
             WHERE d.state = 'online' AND d.status = 'approved'
             GROUP BY v.id, cl.id, u_cl.id, d.id;
         `;
